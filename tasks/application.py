@@ -12,11 +12,11 @@ from storage import mount_disk
 
 
 def setup_disk(vm: QemuVm, fail_stop=True) -> bool:
-    """Check if virtio-blk (/dev/vdb) is available. If so, prepare the disk for the evaluation"""
+    """Check if virtio-blk (/dev/vda) is available. If so, prepare the disk for the evaluation"""
     if vm.config["virtio_blk"] is None:
         return False
 
-    r = mount_disk(vm, "/dev/vdb", "/mnt", format="auto")
+    r = mount_disk(vm, "/dev/vda", "/mnt", format="auto")
     if not r:
         if fail_stop:
             raise Exception("Failed to mount virtio-blk")

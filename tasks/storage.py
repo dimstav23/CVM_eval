@@ -13,7 +13,7 @@ def run_fio(
     name: str,
     vm: QemuVm,
     job: str = "test",
-    filename: str = "/dev/vdb",
+    filename: str = "/dev/vda",
 ):
     date = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     outputdir = Path(f"./bench-result/fio/{name}/{job}/")

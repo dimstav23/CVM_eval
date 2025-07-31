@@ -5,13 +5,13 @@ set -e
 set -u
 set -o pipefail
 
-VM=${VM:-intel}
+VM=(amd snp)
 
 for size in medium
 do
-    for type_ in $VM
+    for type_ in "${VM[@]}"
     do
-        for action in ping iperf iperf-udp nginx
+        for action in ping iperf iperf-udp
         do
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm"
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm"  --virtio-nic-vhost
@@ -21,12 +21,11 @@ do
     done
 done
 
-
 for size in medium
 do
-    for type_ in $VM
+    for type_ in "${VM[@]}"
     do
-        for action in memtier memtier-memcached
+        for action in memtier
         do
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm"
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm" --tls

@@ -37,19 +37,26 @@ vshot_swiotlb_col = pastel[5]
 cvm_col = pastel[2]
 cvm_vhost_col = pastel[3]
 poll_col = pastel[6]
-palette = [vm_col, swiotlb_col, vhost_col, vshot_swiotlb_col, cvm_col,
-           cvm_vhost_col, *pastel[6:]]
+palette = [
+    vm_col,
+    swiotlb_col,
+    vhost_col,
+    vshot_swiotlb_col,
+    cvm_col,
+    cvm_vhost_col,
+    *pastel[6:],
+]
 # hatches = ["", "//"]
-#hatches = ["", "", "", "", "//", "//", "//", "//", "//", "//"]
+# hatches = ["", "", "", "", "//", "//", "//", "//", "//", "//"]
 hatches = ["", "o", "*", ".", "//", "-", "\\", ".", "o-", "*-"]
 
 palette2 = [vm_col, vhost_col, cvm_col, cvm_vhost_col, *pastel[6:]]
-#hatches2 = ["", "", "//", "//"]
+# hatches2 = ["", "", "//", "//"]
 hatches2 = ["", "*", "//", "+"]
 
-#palette3 = [vm_col, vhost_col, cvm_col, cvm_vhost_col, poll_col, cvm_col, cvm_vhost_col, poll_col]
+# palette3 = [vm_col, vhost_col, cvm_col, cvm_vhost_col, poll_col, cvm_col, cvm_vhost_col, poll_col]
 palette3 = [vm_col, vhost_col, cvm_col, cvm_vhost_col, *pastel[6:]]
-#hatches3 = ["", "", "//", "//", "//", "x", "x", "x", "x"]
+# hatches3 = ["", "", "//", "//", "//", "x", "x", "x", "x"]
 hatches3 = ["", "*", "//", "-", "\\", ".", "o-", "*-"]
 
 BENCH_RESULT_DIR = Path("./bench-result/network")
@@ -327,7 +334,7 @@ def plot_iperf(
         pcvm += "-poll"
 
     def get_name(name, p, vhost=False, mq=mq, swiotlb=False):
-        n = f"{name}-direct-{size}{p}"
+        n = f"{name}-disk-{size}{p}"
         if vhost:
             n += "-vhost"
         if mq:
@@ -399,7 +406,7 @@ def plot_iperf(
     )
     if pkt is not None:
         ax.set_xticklabels([])
-        #ax.set_xlabel(f"Buffer Size {pkt} byte")
+        # ax.set_xlabel(f"Buffer Size {pkt} byte")
         ax.set_xlabel("")
     else:
         ax.set_xlabel("Packet Size (byte)")
@@ -407,7 +414,7 @@ def plot_iperf(
     ax.set_title("Higher is better ↑", fontsize=FONTSIZE, color="navy")
 
     # second axis for CPU utilization
-    #if mode == "tcp" and mq:
+    # if mode == "tcp" and mq:
     #    print("plot cpu utilization")
     #    # get x position of each bar
     #    xpos = []
@@ -435,17 +442,17 @@ def plot_iperf(
     # set hatch
     if mode == "udp":
         pass
-        #bars = ax.patches
-        #hs = []
-        #num_x = len(df["size"].unique())
-        #for hatch in hatches:
+        # bars = ax.patches
+        # hs = []
+        # num_x = len(df["size"].unique())
+        # for hatch in hatches:
         #    hs.extend([hatch] * num_x)
-        #num_legend = len(bars) - len(hs)
-        #hs.extend([""] * num_legend)
-        #for bar, hatch in zip(bars, hs):
+        # num_legend = len(bars) - len(hs)
+        # hs.extend([""] * num_legend)
+        # for bar, hatch in zip(bars, hs):
         #    bar.set_hatch(hatch)
     else:
-        #for bar in ax.patches[4:6]:
+        # for bar in ax.patches[4:6]:
         #    bar.set_hatch("//")
         for i, bar in enumerate(ax.patches):
             patch = hatches[i % len(hatches)]
@@ -458,7 +465,6 @@ def plot_iperf(
         for i, patch in enumerate(ax.get_legend().get_patches()):
             patch.set_hatch(hatches[i % len(hatches)])
 
-
     # annotate values with .2f
     for container in ax.containers:
         if mode == "udp":
@@ -466,7 +472,7 @@ def plot_iperf(
         else:
             ax.bar_label(container, fmt="%.2f", fontsize=5)
 
-    sns.despine(top = True)
+    sns.despine(top=True)
     plt.tight_layout()
 
     if outname is None:
@@ -484,9 +490,14 @@ def plot_iperf(
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    save_path = outdir / outname
-    plt.savefig(save_path, bbox_inches="tight")
-    print(f"Plot saved in {save_path}")
+    # Save as PDF
+    save_path_pdf = outdir / outname
+    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
+    print(f"PDF plot saved in {save_path_pdf}")
+    # Save as PNG
+    save_path_png = outdir / outname.replace(".pdf", ".png")
+    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
+    print(f"PNG plot saved in {save_path_png}")
 
 
 @task
@@ -523,7 +534,7 @@ def plot_ping(
         pcvm += "-poll"
 
     def get_name(name, p, vhost=False, mq=mq, swiotlb=False):
-        n = f"{name}-direct-{size}{p}"
+        n = f"{name}-disk-{size}{p}"
         if vhost:
             n += "-vhost"
         if mq:
@@ -582,7 +593,7 @@ def plot_ping(
     )
     if not all:
         ax.set_xticklabels([])
-        #ax.set_xlabel("Ping (64 byte)")
+        # ax.set_xlabel("Ping (64 byte)")
         ax.set_xlabel("")
     else:
         ax.set_xlabel("Packet Size (byte)")
@@ -605,17 +616,17 @@ def plot_ping(
 
     # set hatch for the legend
     print(ax.get_legend().get_patches())
-    plt.legend(fontsize=5,loc="lower center", ncol=4)
+    plt.legend(fontsize=5, loc="lower center", ncol=4)
     for i, patch in enumerate(ax.get_legend().get_patches()):
         patch.set_hatch(hatches[i % len(hatches)])
-    #for patch in ax.get_legend().get_patches()[4:]:
+    # for patch in ax.get_legend().get_patches()[4:]:
     #    patch.set_hatch("//")
 
     # annotate values with .2f
     for container in ax.containers:
         ax.bar_label(container, fmt="%.3f")
 
-    sns.despine(top = True)
+    sns.despine(top=True)
     plt.tight_layout()
 
     if outname is None:
@@ -630,9 +641,14 @@ def plot_ping(
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    save_path = outdir / outname
-    plt.savefig(save_path, bbox_inches="tight")
-    print(f"Plot saved in {save_path}")
+    # Save as PDF
+    save_path_pdf = outdir / outname
+    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
+    print(f"PDF plot saved in {save_path_pdf}")
+    # Save as PNG
+    save_path_png = outdir / outname.replace(".pdf", ".png")
+    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
+    print(f"PNG plot saved in {save_path_png}")
 
 
 @task
@@ -659,7 +675,7 @@ def plot_redis(
         cvm_label = "td"
 
     def get_name(name, vhost=False, p="", mq=mq):
-        n = f"{name}-direct-{size}{p}"
+        n = f"{name}-disk-{size}{p}"
         if vhost:
             n += "-vhost"
         if mq:
@@ -736,7 +752,7 @@ def plot_redis(
     for container in ax.containers:
         ax.bar_label(container, fmt="%.2f")
 
-    sns.despine(top = True)
+    sns.despine(top=True)
     plt.tight_layout()
 
     if outname is None:
@@ -749,9 +765,14 @@ def plot_redis(
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    save_path = outdir / outname
-    plt.savefig(save_path, bbox_inches="tight")
-    print(f"Plot saved in {save_path}")
+    # Save as PDF
+    save_path_pdf = outdir / outname
+    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
+    print(f"PDF plot saved in {save_path_pdf}")
+    # Save as PNG
+    save_path_png = outdir / outname.replace(".pdf", ".png")
+    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
+    print(f"PNG plot saved in {save_path_png}")
 
 
 @task
@@ -778,7 +799,7 @@ def plot_memcached(
         cvm_label = "td"
 
     def get_name(name, vhost=False, p="", mq=mq):
-        n = f"{name}-direct-{size}{p}"
+        n = f"{name}-disk-{size}{p}"
         if vhost:
             n += "-vhost"
         if mq:
@@ -851,18 +872,17 @@ def plot_memcached(
 
     # set hatch for the legend
     # for patch in ax.get_legend().get_patches()[1::2]:
-    #for patch in ax.get_legend().get_patches()[2:]:
+    # for patch in ax.get_legend().get_patches()[2:]:
     #    patch.set_hatch("//")
     patches = ax.get_legend().get_patches()
     for hatch, patch in zip(hatches3, patches):
         patch.set_hatch(hatch)
 
-
     # annotate values with .2f
     for container in ax.containers:
         ax.bar_label(container, fmt="%.2f", padding=2, rotation=90, fontsize=5)
 
-    sns.despine(top = True)
+    sns.despine(top=True)
     plt.tight_layout()
 
     if outname is None:
@@ -875,9 +895,14 @@ def plot_memcached(
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    save_path = outdir / outname
-    plt.savefig(save_path, bbox_inches="tight")
-    print(f"Plot saved in {save_path}")
+    # Save as PDF
+    save_path_pdf = outdir / outname
+    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
+    print(f"PDF plot saved in {save_path_pdf}")
+    # Save as PNG
+    save_path_png = outdir / outname.replace(".pdf", ".png")
+    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
+    print(f"PNG plot saved in {save_path_png}")
 
 
 @task
@@ -905,7 +930,7 @@ def plot_nginx(
         cvm_label = "td"
 
     def get_name(name, vhost=False, p="", mq=mq):
-        n = f"{name}-direct-{size}{p}"
+        n = f"{name}-disk-{size}{p}"
         if vhost:
             n += "-vhost"
         if mq:
@@ -972,9 +997,9 @@ def plot_nginx(
 
     # annotate values with .2f
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.0f",rotation=90, fontsize=5)
+        ax.bar_label(container, fmt="%.0f", rotation=90, fontsize=5)
 
-    sns.despine(top = True)
+    sns.despine(top=True)
     plt.tight_layout()
 
     if outname is None:
@@ -987,6 +1012,11 @@ def plot_nginx(
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    save_path = outdir / outname
-    plt.savefig(save_path, bbox_inches="tight")
-    print(f"Plot saved in {save_path}")
+    # Save as PDF
+    save_path_pdf = outdir / outname
+    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
+    print(f"PDF plot saved in {save_path_pdf}")
+    # Save as PNG
+    save_path_png = outdir / outname.replace(".pdf", ".png")
+    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
+    print(f"PNG plot saved in {save_path_png}")

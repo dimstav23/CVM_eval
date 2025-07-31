@@ -17,7 +17,7 @@ CA_CERT := join(SCRIPT_DIR, "tls/pki/ca.crt")
 #config
 THREADS := "4"
 CONNECTIONS := "8"
-PINGS := "20"
+PINGS := "300"
 
 #ping
 run-ping pkt_size:
@@ -25,13 +25,13 @@ run-ping pkt_size:
 
 #iperf
 run-iperf-server:
-  iperf -s -p {{IPERF_PORT}} -D
+  iperf3 -s -p {{IPERF_PORT}} -D
 
 run-iperf-client-tcp pkt_size:
-  iperf -c {{VM_IP}} -p {{IPERF_PORT}} -l {{pkt_size}} -P {{CONNECTIONS}}
+  iperf3 -c {{VM_IP}} -p {{IPERF_PORT}} -l {{pkt_size}} -P {{CONNECTIONS}}
 
 run-iperf-client-udp pkt_size:
-  iperf -c {{VM_IP}} -p {{IPERF_PORT}} -l {{pkt_size}} -P {{CONNECTIONS}} -b 0 -u
+  iperf3 -c {{VM_IP}} -p {{IPERF_PORT}} -l {{pkt_size}} -P {{CONNECTIONS}} -b 0 -u
 
 #nginx
 run-nginx:
@@ -51,13 +51,15 @@ run-redis:
   redis-server \
   --protected-mode no \
   --daemonize yes \
-  --port {{STANDARD_MEMTIER_PORT}}
+  --port {{STANDARD_MEMTIER_PORT}} \
+  --bind 0.0.0.0
 
 run-redis-tls:
   redis-server \
   --protected-mode no \
   --daemonize yes \
   --port {{STANDARD_MEMTIER_PORT}} \
+  --bind 0.0.0.0 \
   --tls-port {{TLS_MEMTIER_PORT}} \
   --tls-cert-file {{SERVER_CERT}} \
   --tls-key-file {{SERVER_KEY}} \

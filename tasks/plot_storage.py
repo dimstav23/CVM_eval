@@ -236,17 +236,22 @@ def plot_bw(df, outdir, outname, legend=True):
     )
 
     if not legend:
-        plt.legend([],[], frameon=False)
+        plt.legend([], [], frameon=False)
 
     # plt.ylabel("Maximum Bandwidth [GiB/s]")
     plt.ylabel("Bandwidth [GiB/s]")
     plt.xlabel("")
     plt.title("Higher is better ↑", fontsize=9, color="navy", weight="bold")
-    sns.despine(top = True)
+    sns.despine(top=True)
     plt.tight_layout()
-    outfile = Path(outdir) / outname
-    plt.savefig(outfile, format="pdf", pad_inches=0, bbox_inches="tight")
-    print(f"saved to {outfile}")
+    # Save as PDF
+    outfile_pdf = Path(outdir) / outname
+    plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight")
+    print(f"PDF saved to {outfile_pdf}")
+    # Save as PNG
+    outfile_png = Path(outdir) / outname.replace(".pdf", ".png")
+    plt.savefig(outfile_png, format="png", pad_inches=0, bbox_inches="tight", dpi=300)
+    print(f"PNG saved to {outfile_png}")
     plt.clf()
 
 
@@ -435,10 +440,10 @@ def plot_iops(df, outdir, outname="", legend=True):
         ax.text(
             x=p.get_x() + p.get_width() / 2.0,
             y=height + 2000,
-            #s=f"{height/1000:.2f}",
+            # s=f"{height/1000:.2f}",
             s=f"{height/1000:.0f}",
             ha="center",
-            #rotation=90,
+            # rotation=90,
         )
 
     ax.yaxis.set_major_formatter(
@@ -455,7 +460,7 @@ def plot_iops(df, outdir, outname="", legend=True):
     )
 
     if not legend:
-        plt.legend([],[], frameon=False)
+        plt.legend([], [], frameon=False)
 
     # ax.set(xticklabels=["readread", "randwrite", "mixread70",
     #                     "mixread30"])
@@ -463,15 +468,20 @@ def plot_iops(df, outdir, outname="", legend=True):
     #                     "Mixrw(read30)"], rotation=45)
     ax.set_xticklabels(["RandR", "RandW", "RRW70", "RRW30"], rotation=30)
     # sns.despine()
-    #plt.ylabel("4KB Throughput [K IOPS]")
+    # plt.ylabel("4KB Throughput [K IOPS]")
     plt.ylabel("Throughput [K IOPS]")
     plt.xlabel("")
     plt.title("Higher is better ↑", fontsize=9, color="navy", weight="bold")
-    sns.despine(top = True)
+    sns.despine(top=True)
     plt.tight_layout()
-    outfile = Path(outdir) / outname
-    plt.savefig(outfile, format="pdf", pad_inches=0, bbox_inches="tight")
-    print(f"saved to {outfile}")
+    # Save as PDF
+    outfile_pdf = Path(outdir) / outname
+    plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight")
+    print(f"PDF saved to {outfile_pdf}")
+    # Save as PNG
+    outfile_png = Path(outdir) / outname.replace(".pdf", ".png")
+    plt.savefig(outfile_png, format="png", pad_inches=0, bbox_inches="tight", dpi=300)
+    print(f"PNG saved to {outfile_png}")
     plt.clf()
 
 
@@ -628,10 +638,10 @@ def plot_latency(df, outdir, outname, legend=True):
         ax.text(
             x=p.get_x() + p.get_width() / 2.0,
             y=height + 2000,
-            #s=f"{height/1000:.2f}",
+            # s=f"{height/1000:.2f}",
             s=f"{height/1000:.0f}",
             ha="center",
-            #rotation=90,
+            # rotation=90,
         )
 
     sns.move_legend(
@@ -644,7 +654,7 @@ def plot_latency(df, outdir, outname, legend=True):
     )
 
     if not legend:
-        plt.legend([],[], frameon=False)
+        plt.legend([], [], frameon=False)
 
     # ax.set(xticklabels=["read", "write", "randread", "randwrite"], rotation=90)
     # ax.set_xticklabels(["Read", "Write", "Randread", "Randwrite"], rotation=45)
@@ -652,11 +662,16 @@ def plot_latency(df, outdir, outname, legend=True):
     plt.ylabel("4KB Latency [us]")
     plt.xlabel("")
     plt.title("Lower is better ↓", fontsize=9, color="navy", weight="bold")
-    sns.despine(top = True)
+    sns.despine(top=True)
     plt.tight_layout()
-    outfile = Path(outdir) / outname
-    plt.savefig(outfile, format="pdf", pad_inches=0, bbox_inches="tight")
-    print(f"saved to {outfile}")
+    # Save as PDF
+    outfile_pdf = Path(outdir) / outname
+    plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight")
+    print(f"PDF saved to {outfile_pdf}")
+    # Save as PNG
+    outfile_png = Path(outdir) / outname.replace(".pdf", ".png")
+    plt.savefig(outfile_png, format="png", pad_inches=0, bbox_inches="tight", dpi=300)
+    print(f"PNG saved to {outfile_png}")
     plt.clf()
 
 
@@ -696,43 +711,36 @@ def plot_fio(
         pcvm += "-poll"
 
     dfs = []
-    dfs.append(
-        read_result(f"{vm}-direct-{size}-{device}{pvm}-{aio}", vm_label, jobfile)
-    )
+    dfs.append(read_result(f"{vm}-disk-{size}{pvm}-{aio}", vm_label, jobfile))
     if swiotlb and not poll:
         dfs.append(
-            read_result(
-                f"{vm}-direct-{size}-{device}-{aio}{pvm}-swiotlb", "swiotlb", jobfile
-            )
+            read_result(f"{vm}-disk-{size}-{aio}{pvm}-swiotlb", "swiotlb", jobfile)
         )
-    dfs.append(
-        read_result(f"{cvm}-direct-{size}-{device}{pcvm}-{aio}", cvm_label, jobfile)
-    )
+    dfs.append(read_result(f"{cvm}-disk-{size}{pcvm}-{aio}", cvm_label, jobfile))
     if all:
         dfs.append(
-            read_result(
-                f"{cvm}-direct-{size}-{device}-poll-{aio}", f"{cvm_label}-poll", jobfile
-            )
+            read_result(f"{cvm}-disk-{size}-poll-{aio}", f"{cvm_label}-poll", jobfile)
         )
-        #dfs.append(
+        # dfs.append(
         #    read_result(
-        #        f"{vm}-direct-{size}-{device}-poll-{aio}", f"{vm_label}-poll", jobfile
+        #        f"{vm}-disk-{size}-poll-{aio}", f"{vm_label}-poll", jobfile
         #    )
-        #)
+        # )
 
     df = pd.concat(dfs)
     print(df)
-    # save df
-    df.to_csv(Path(outdir) / f"fio_{device}{pvm}.csv", index=False)
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
+    # save df
+    df.to_csv(Path(outdir) / f"fio_{pvm}.csv", index=False)
+
     if all:
         pvm += "-all"
-    plot_bw(df, outdir, f"fio_bw_{device}{pvm}.pdf", legend=True)
-    plot_iops(df, outdir, f"fio_iops_{device}{pvm}.pdf", legend=False)
-    plot_latency(df, outdir, f"fio_latency_{device}{pvm}.pdf", legend=False)
+    plot_bw(df, outdir, f"fio_bw_{pvm}.pdf", legend=True)
+    plot_iops(df, outdir, f"fio_iops_{pvm}.pdf", legend=False)
+    plot_latency(df, outdir, f"fio_latency_{pvm}.pdf", legend=False)
 
 
 @task
@@ -769,12 +777,8 @@ def analyze_fio(
         pvm += "-poll"
         pcvm += "-poll"
 
-    df = read_result(
-        f"{vm}-direct-{size}-{device}{pvm}-{aio}", vm_label, jobfile, max_num=10
-    )
-    cdf = read_result(
-        f"{cvm}-direct-{size}-{device}{pcvm}-{aio}", cvm_label, jobfile, max_num=10
-    )
+    df = read_result(f"{vm}-disk-{size}-{pvm}-{aio}", vm_label, jobfile, max_num=10)
+    cdf = read_result(f"{cvm}-disk-{size}-{pcvm}-{aio}", cvm_label, jobfile, max_num=10)
 
     print(df[(df["jobname"] == "bw read")]["read_bw_mean"])
     print(cdf[(cdf["jobname"] == "bw read")]["read_bw_mean"])

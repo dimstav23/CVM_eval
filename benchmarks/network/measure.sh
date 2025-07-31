@@ -21,7 +21,7 @@ do
     # -b 0 : no bandwidth limit
     # -i 1 : report interval 1s
     # -P 8 : 8 parallel streams
-    iperf -c ${DESTIP} -p ${DESTPORT} -u -b 0 -i 1 -l ${pkt} -P ${PROCESS} > ${DIR}/iperf-udp-${pkt}.txt
+    iperf3 -c ${DESTIP} -p ${DESTPORT} -u -b 0 -i 1 -l ${pkt} -P ${PROCESS} > ${DIR}/iperf-udp-${pkt}.txt
 done
 
 for pkt in 64 128 256 512 1K 32K 128K
@@ -29,7 +29,7 @@ do
     # TCP
     # -i 1 : report interval 1s
     # -P 8 : 8 parallel streams
-    iperf -c ${DESTIP} -p ${DESTPORT} -b 0 -i 1 -l ${pkt} -P ${PROCESS} > ${DIR}/iperf-tcp-${pkt}.txt
+    iperf3 -c ${DESTIP} -p ${DESTPORT} -b 0 -i 1 -l ${pkt} -P ${PROCESS} > ${DIR}/iperf-tcp-${pkt}.txt
 done
 
 DIR=${PROJECTPATH}/bench-result/network/ping/${VM}-direct-${SIZE}/${DATE}

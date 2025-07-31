@@ -2,17 +2,17 @@
 
 PROJECT_ROOT := justfile_directory()
 BUILD_DIR := join(PROJECT_ROOT, "build")
-QEMU_SNP := join(BUILD_DIR, "qemu-amd-sev-snp/bin/qemu-system-x86_64")
-OVMF_SNP := join(BUILD_DIR, "ovmf-amd-sev-snp-fd/FV/OVMF.fd")
-OVMF_SNP_CODE := join(BUILD_DIR, "ovmf-amd-sev-snp-fd/FV/OVMF_CODE.fd")
-OVMF_SNP_VARS := join(BUILD_DIR, "ovmf-amd-sev-snp-fd/FV/OVMF_VARS.fd")
+QEMU_SNP := "qemu-system-x86_64"
+OVMF_SNP := join(PROJECT_ROOT, "gdpr_setup/firmware/ovmf/OVMF.fd")
+OVMF_SNP_CODE := join(PROJECT_ROOT, "gdpr_setup/firmware/ovmf/OVMF_CODE.fd")
+OVMF_SNP_VARS := join(PROJECT_ROOT, "gdpr_setup/firmware/ovmf/OVMF_VARS.fd")
 # qemu and ovmf for normal guest (use SNP version for now)
 QEMU := QEMU_SNP
 OVMF := OVMF_SNP
 OVMF_CODE := OVMF_SNP_CODE
 OVMF_VARS := OVMF_SNP_VARS
-SNP_IMAGE := join(BUILD_DIR, "image/snp-guest-image.qcow2")
-NORMAL_IMAGE := join(BUILD_DIR, "image/normal-guest-image.qcow2")
+SNP_IMAGE := join(PROJECT_ROOT, "gdpr_setup/images/gdpr.img")
+NORMAL_IMAGE := join(PROJECT_ROOT, "gdpr_setup/images/gdpr.img")
 GUEST_FS := join(BUILD_DIR, "image/guest-fs.qcow2")
 SSH_PORT := "2225"
 smp := "4"
@@ -56,52 +56,6 @@ start-vm-disk:
         -device virtio-net-pci,netdev=en0 \
         -drive if=pflash,format=raw,unit=0,file={{OVMF}},readonly=on
 
-start-vm-direct:
-    sudo {{QEMU}} \
-        -cpu host \
-        -smp {{smp}} \
-        -m {{mem}} \
-        -machine q35 \
-        -enable-kvm \
-        -nographic \
-        -kernel {{LINUX_DIR}}/arch/x86/boot/bzImage \
-        -append "root=/dev/vda console=hvc0" \
-        -blockdev qcow2,node-name=q2,file.driver=file,file.filename={{GUEST_FS}} \
-        -device virtio-blk-pci,drive=q2 \
-        -device virtio-net-pci,netdev=net0 \
-        -netdev user,id=net0,hostfwd=tcp::{{SSH_PORT}}-:22 \
-        -virtfs local,path={{PROJECT_ROOT}},security_model=none,mount_tag=share \
-        -drive if=pflash,format=raw,unit=0,file={{OVMF}},readonly=on \
-        -serial null \
-        -device virtio-serial \
-        -chardev stdio,mux=on,id=char0,signal=off \
-        -mon chardev=char0,mode=readline \
-        -device virtconsole,chardev=char0,id=vc0,nr=0
-
-start-vm-direct-vhost:
-    sudo {{QEMU}} \
-        -cpu host \
-        -smp {{smp}} \
-        -m {{mem}} \
-        -machine q35 \
-        -enable-kvm \
-        -nographic \
-        -kernel {{LINUX_DIR}}/arch/x86/boot/bzImage \
-        -append "root=/dev/vda console=hvc0" \
-        -blockdev qcow2,node-name=q2,file.driver=file,file.filename={{GUEST_FS}} \
-        -device virtio-blk-pci,drive=q2 \
-        -device virtio-net-pci,netdev=net0 \
-        -netdev user,id=net0,hostfwd=tcp::{{SSH_PORT}}-:22 \
-        -virtfs local,path={{PROJECT_ROOT}},security_model=none,mount_tag=share \
-        -drive if=pflash,format=raw,unit=0,file={{OVMF}},readonly=on \
-        -netdev tap,id=en0,ifname={{TAP_NAME}},script=no,downscript=no,vhost=on,queues=2 \
-        -device virtio-net-pci,netdev=en0,mq=on,vectors=18 \
-        -serial null \
-        -device virtio-serial \
-        -chardev stdio,mux=on,id=char0,signal=off \
-        -mon chardev=char0,mode=readline \
-        -device virtconsole,chardev=char0,id=vc0,nr=0
-
 start-snp-disk:
     sudo {{QEMU_SNP}} \
         -cpu EPYC-v4,host-phys-bits=true \
@@ -118,136 +72,6 @@ start-snp-disk:
         -netdev user,id=net0,hostfwd=tcp::{{SSH_PORT}}-:22 \
         -virtfs local,path={{PROJECT_ROOT}},security_model=none,mount_tag=share \
         -bios {{OVMF_SNP}}
-
-start-snp-direct:
-    sudo {{QEMU_SNP}} \
-        -cpu EPYC-v4,host-phys-bits=true \
-        -smp {{smp}} \
-        -m {{mem}} \
-        -machine q35,memory-backend=ram1,memory-encryption=sev0,vmport=off \
-        -enable-kvm \
-        -object sev-snp-guest,id=sev0,cbitpos=51,reduced-phys-bits=1,policy=0x30000 \
-        -object memory-backend-memfd,id=ram1,size={{mem}},share=true,prealloc=false \
-        -nographic \
-        -kernel {{LINUX_DIR}}/arch/x86/boot/bzImage \
-        -append "root=/dev/vda console=hvc0" \
-        -blockdev qcow2,node-name=q2,file.driver=file,file.filename={{GUEST_FS}} \
-        -device virtio-blk-pci,drive=q2 \
-        -device virtio-net-pci,netdev=net0 \
-        -netdev user,id=net0,hostfwd=tcp::{{SSH_PORT}}-:22 \
-        -virtfs local,path={{PROJECT_ROOT}},security_model=none,mount_tag=share \
-        -bios {{OVMF_SNP}} \
-        -serial null \
-        -device virtio-serial \
-        -chardev stdio,mux=on,id=char0,signal=off \
-        -mon chardev=char0,mode=readline \
-        -device virtconsole,chardev=char0,id=vc0,nr=0
-
-# ------------------------------
-# TDX machine
-#
-
-#TDX_QEMU := "qemu-system-x86_64"
-TDX_QEMU := join(BUILD_DIR, "qemu-tdx/bin/qemu-system-x86_64")
-#TDVF_FIRMWARE := "/usr/share/ovmf/OVMF.fd"
-TDVF_FIRMWARE := join(BUILD_DIR, "ovmf-tdx-fd/FV/OVMF.fd")
-TDSHIM := "../td-shim/target/release/final.bin"
-CLOUD_HYPERVISOR := "../cloud-hypervisor/target/release/cloud-hypervisor"
-TD_IMG := join(BUILD_DIR, "image/tdx-guest-ubuntu-24.04-generic.qcow2")
-QUOTE_ARGS := "-device vhost-vsock-pci,guest-cid=3"
-
-start-tdx-vm:
-    {{TDX_QEMU}} \
-        -cpu host \
-        -smp {{smp}} \
-        -m {{mem}} \
-        -machine q35,hpet=off,kernel_irqchip=split,memory-encryption=tdx,memory-backend=ram1 \
-        -enable-kvm \
-        -object tdx-guest,id=tdx \
-        -object memory-backend-ram,id=ram1,size={{mem}},private=on \
-        -bios {{TDVF_FIRMWARE}} \
-        -nographic \
-        -nodefaults \
-        -serial stdio \
-        -device virtio-net-pci,netdev=nic0_td \
-        -netdev user,id=nic0_td,hostfwd=tcp::{{SSH_PORT}}-:22 \
-        -drive file={{TD_IMG}},if=none,id=virtio-disk0 \
-        -device virtio-blk-pci,drive=virtio-disk0 \
-        {{QUOTE_ARGS}}
-
-start-tdx-direct:
-    {{TDX_QEMU}} \
-        -cpu host \
-        -smp {{smp}} \
-        -m {{mem}} \
-        -machine q35,hpet=off,kernel_irqchip=split,memory-encryption=tdx,memory-backend=ram1 \
-        -enable-kvm \
-        -object tdx-guest,id=tdx \
-        -object memory-backend-ram,id=ram1,size={{mem}},private=on \
-        -kernel {{LINUX_DIR}}/arch/x86/boot/bzImage \
-        -append "root=/dev/vda console=hvc0" \
-        -bios {{TDVF_FIRMWARE}} \
-        -nographic \
-        -nodefaults \
-        -device virtio-net-pci,netdev=nic0_td \
-        -netdev user,id=nic0_td,hostfwd=tcp::{{SSH_PORT}}-:22 \
-        -drive file={{GUEST_FS}},if=none,id=virtio-disk0 \
-        -device virtio-blk-pci,drive=virtio-disk0 \
-        -serial null \
-        -device virtio-serial \
-        -chardev stdio,mux=on,id=char0,signal=off \
-        -mon chardev=char0,mode=readline \
-        -device virtconsole,chardev=char0,id=vc0,nr=0 \
-        {{QUOTE_ARGS}}
-
-start-ch:
-   {{CLOUD_HYPERVISOR}} \
-        --kernel {{LINUX_DIR}}/arch/x86/boot/bzImage \
-        --cmdline "console=hvc0 root=/dev/vda rw" \
-        --cpus boot={{smp}} \
-        --memory size={{mem}} \
-        --disk path={{GUEST_FS}} 
-
-start-ch-tdvf:
-   {{CLOUD_HYPERVISOR}} \
-        --platform tdx=on \
-        --firmware {{TDVF_FIRMWARE}} \
-        --kernel {{LINUX_DIR}}/arch/x86/boot/bzImage \
-        --cmdline "console=hvc0 root=/dev/vda rw" \
-        --cpus boot={{smp}} \
-        --memory size={{mem}} \
-        --disk path={{GUEST_FS}} 
-
-start-ch-tdshim:
-   {{CLOUD_HYPERVISOR}} \
-        --platform tdx=on \
-        --firmware {{TDSHIM}} \
-        --kernel {{LINUX_DIR}}/arch/x86/boot/bzImage \
-        --cmdline "console=hvc0 root=/dev/vda rw" \
-        --cpus boot={{smp}} \
-        --memory size={{mem}} \
-        --disk path={{GUEST_FS}} 
-
-start-intel-direct:
-    {{TDX_QEMU}} \
-        -cpu host \
-        -smp {{smp}} \
-        -m {{mem}} \
-        -enable-kvm \
-        -kernel {{LINUX_DIR}}/arch/x86/boot/bzImage \
-        -append "root=/dev/vda console=hvc0" \
-        -bios {{TDVF_FIRMWARE}} \
-        -nographic \
-        -nodefaults \
-        -device virtio-net-pci,netdev=nic0_td \
-        -netdev user,id=nic0_td,hostfwd=tcp::{{SSH_PORT}}-:22 \
-        -drive file={{GUEST_FS}},if=none,id=virtio-disk0 \
-        -device virtio-blk-pci,drive=virtio-disk0 \
-        -serial null \
-        -device virtio-serial \
-        -chardev stdio,mux=on,id=char0,signal=off \
-        -mon chardev=char0,mode=readline \
-        -device virtconsole,chardev=char0,id=vc0,nr=0
 
 # ------------------------------
 # Utility commands

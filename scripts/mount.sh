@@ -6,7 +6,7 @@
 mkdir -p /share
 mount -t 9p -o trans=virtio,version=9p2000.L share /share
 
-if [ -e /dev/vdb ]; then
+if [ -e /dev/vda ]; then
     mkdir -p /mnt
-    mount /dev/vdb /mnt
+    mount /dev/vda /mnt
 fi

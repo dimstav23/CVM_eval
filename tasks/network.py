@@ -11,7 +11,7 @@ from qemu import QemuVm
 
 def run_ping(name: str, vm: QemuVm, pin_base=20):
     """Ping the VM.
-    The results are saved in ./bench-results/network/ping/{name}/{date}
+    The results are saved in ./bench-result/network/ping/{name}/{date}
     """
     date = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     outputdir = Path(f"./bench-result/network/ping/{name}/{date}/")
@@ -20,7 +20,7 @@ def run_ping(name: str, vm: QemuVm, pin_base=20):
 
     for pkt_size in [64, 128, 256, 512, 1024]:
         process = subprocess.Popen(
-            f"taskset -c {pin_base} ping -c 30 -i0.1 -s {pkt_size} {VM_IP}".split(" "),
+            f"taskset -c {pin_base} ping -c 300 -i0.1 -s {pkt_size} {VM_IP}".split(" "),
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
@@ -56,7 +56,7 @@ def run_iperf(
         if parallel is None:
             parallel = 8
     else:
-        pkt_sizes = ["128K"]
+        pkt_sizes = ["256", "4K", "32K", "128K"]
         proto = "tcp"
         if parallel is None:
             parallel = 32
@@ -69,7 +69,7 @@ def run_iperf(
     outputdir_host.mkdir(parents=True, exist_ok=True)
 
     # start server
-    server_cmd = ["iperf", "-s", "-p", f"{port}", "-D"]
+    server_cmd = ["iperf3", "-s", "-p", f"{port}", "-D"]
     vm.ssh_cmd(server_cmd)
     time.sleep(1)
 
@@ -79,7 +79,7 @@ def run_iperf(
             "taskset",
             "-c",
             f"{pin_start}-{pin_end}",
-            "iperf",
+            "iperf3",
             "-c",
             f"{VM_IP}",
             "-p",

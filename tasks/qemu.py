@@ -166,6 +166,7 @@ class QemuVm:
             ):
                 break
             time.sleep(0.1)
+        print(f"done with waiting for ssh on {self.ssh_port}")
 
     def ssh_Popen(
         self,
