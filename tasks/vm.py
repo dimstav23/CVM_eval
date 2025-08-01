@@ -800,7 +800,7 @@ def start(
     repeat: int = 1,
     virtio_iommu: bool = False,  # enable VIRTIO_F_ACCESS_PLATFORM (VIRTIO_F_IOMMU_PLATFORM) feature bit
     # virtio-nic options
-    virtio_nic: bool = False,
+    virtio_nic: bool = True,
     virtio_nic_vhost: bool = False,
     virtio_nic_mq: bool = False,
     virtio_nic_tap: str = "tap_cvm",
