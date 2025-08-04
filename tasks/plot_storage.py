@@ -15,7 +15,6 @@ import pandas as pd
 import seaborn as sns
 
 # common graph settings
-
 mpl.use("Agg")
 mpl.rcParams["text.latex.preamble"] = r"\usepackage{amsmath}"
 mpl.rcParams["pdf.fonttype"] = 42
@@ -30,14 +29,14 @@ sns.set_context("paper", rc={"font.size": 5, "axes.titlesize": 5, "axes.labelsiz
 figwidth_half = 3.3
 figwidth_full = 7
 
-FONTSIZE = 9
+FONTSIZE = 6
+TITLE_FONTSIZE = FONTSIZE
+LABEL_FONTSIZE = FONTSIZE
+TICK_FONTSIZE = FONTSIZE - 1
+LEGEND_FONTSIZE = FONTSIZE
+ANNOTATION_FONTSIZE = FONTSIZE / 2 - 1
 
-pastel = sns.color_palette("pastel")
-vm_col = pastel[0]
-swiotlb_col = pastel[1]
-cvm_col = pastel[2]
-palette = [vm_col, swiotlb_col, cvm_col]
-# hatches = ["", "//", "x", "//x"]
+palette = sns.color_palette("pastel", n_colors=5)
 hatches = ["", "o", "//", "x", ""]
 
 
@@ -125,96 +124,87 @@ def read_result(
 
     # merge df
     df = pd.concat(dfs)
-
     return df
 
 
 def plot_bw(df, outdir, outname, legend=True):
-    fig, ax = plt.subplots(figsize=(figwidth_half, 2.5))
+    fig, ax = plt.subplots(figsize=(figwidth_full / 1.5, 2.5))  # Made wider for 4 bars
 
-    # read
-    bw = df[(df["jobname"] == "bw read")].reset_index()
-    ## select median
-    names = bw["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = bw[bw["name"] == name]["read_bw_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = bw.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    bw = pd.concat(dfs)
+    # Handle all bandwidth jobs
+    bw_jobs = ["bw read", "bw write", "bw randread", "bw randwrite"]
+    bw_data = []
 
-    # get meaidn values of read_bw_mean
+    for job in bw_jobs:
+        job_df = df[df["jobname"] == job].reset_index()
+        if job_df.empty:
+            continue
+
+        # Select median for each system
+        names = job_df["name"].unique()
+        for name in names:
+            if "read" in job:
+                ranks = job_df[job_df["name"] == name]["read_bw_mean"].rank(pct=True)
+                metric = "read_bw_mean"
+                error = "read_bw_dev"
+            else:
+                ranks = job_df[job_df["name"] == name]["write_bw_mean"].rank(pct=True)
+                metric = "write_bw_mean"
+                error = "write_bw_dev"
+
+            close_to_median = abs(ranks - 0.5)
+            idx = close_to_median.idxmin()
+            row = job_df.loc[idx].copy()
+            row["metric_value"] = row[metric]
+            row["error_value"] = row[error]
+            bw_data.append(row)
+
+    if not bw_data:
+        print("No bandwidth data found")
+        return
+
+    bw_df = pd.DataFrame(bw_data)
+
+    # Create the plot
     ax = sns.barplot(
-        data=bw,
+        data=bw_df,
         x="jobname",
-        y="read_bw_mean",
+        y="metric_value",
         hue="name",
         palette=palette,
         edgecolor="k",
         linewidth=1.0,
     )
+
+    # Add error bars
     h, l = ax.get_legend_handles_labels()
     x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax.patches]
     y_coords = [p.get_height() for p in ax.patches]
-    n = len(x_coords) // 2
-    ax.errorbar(
-        x=x_coords[:n], y=y_coords[:n], yerr=bw["read_bw_dev"], fmt="none", c="k"
-    )
-    ax.get_legend().set_title("")
-    for i, bar in enumerate(ax.patches[:n]):
-        bar.set_hatch(hatches[i])
-    for i, handle in enumerate(ax.get_legend().legend_handles):
-        handle.set_hatch(hatches[i])
+    n = len(l)  # number of systems
 
-    ## write
-    bw = df[(df["jobname"] == "bw write")].reset_index()
-    # select median
-    names = bw["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = bw[bw["name"] == name]["write_bw_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = bw.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    bw = pd.concat(dfs)
-    ax = sns.barplot(
-        data=bw,
-        x="jobname",
-        y="write_bw_mean",
-        hue="name",
-        palette=palette,
-        edgecolor="k",
-        linewidth=1.0,
-        legend=False,
-    )
-    h, l = ax.get_legend_handles_labels()
-    x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax.patches]
-    y_coords = [p.get_height() for p in ax.patches]
-    ax.errorbar(
-        x=x_coords[n * 2 :],
-        y=y_coords[n * 2 :],
-        yerr=bw["write_bw_dev"],
-        fmt="none",
-        c="k",
-        elinewidth=1,
-    )
-    # apply hatch
-    for i, bar in enumerate(ax.patches[n * 2 :]):
-        bar.set_hatch(hatches[i])
+    for i, job in enumerate(bw_jobs):
+        job_data = bw_df[bw_df["jobname"] == job]
+        if not job_data.empty:
+            start_idx = i * n
+            end_idx = start_idx + len(job_data)
+            ax.errorbar(
+                x=x_coords[start_idx:end_idx],
+                y=y_coords[start_idx:end_idx],
+                yerr=job_data["error_value"],
+                fmt="none",
+                c="k",
+            )
 
-    # put numbers on top of bars
+    if ax.get_legend():
+        ax.get_legend().set_title("")
+
+    # Put numbers on top of bars
     for i, p in enumerate(ax.patches):
         height = p.get_height()
         if height == 0.0:
             continue
         ax.text(
             x=p.get_x() + p.get_width() / 2.0,
-            y=height + 100000,
+            y=height + height * 0.05,
             s=f"{height/1_000_000:.2f}",
             ha="center",
         )
@@ -223,13 +213,13 @@ def plot_bw(df, outdir, outname, legend=True):
         mpl.ticker.FuncFormatter(lambda val, pos: f"{val/1_000_000:g}")
     )
 
-    # ax.set(xticklabels=["seq read", "seq write"])
-    ax.set_xticklabels(["Read", "Write"], rotation=30)
+    ax.set_xticklabels(
+        ["Seq Read", "Seq Write", "Rand Read", "Rand Write"], fontsize=TICK_FONTSIZE
+    )
 
     sns.move_legend(
         ax,
         "lower center",
-        # bbox_to_anchor=(0.5, 0),
         ncol=5,
         title=None,
         frameon=True,
@@ -238,12 +228,12 @@ def plot_bw(df, outdir, outname, legend=True):
     if not legend:
         plt.legend([], [], frameon=False)
 
-    # plt.ylabel("Maximum Bandwidth [GiB/s]")
     plt.ylabel("Bandwidth [GiB/s]")
     plt.xlabel("")
-    plt.title("Higher is better ↑", fontsize=9, color="navy", weight="bold")
+    plt.title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
     sns.despine(top=True)
     plt.tight_layout()
+
     # Save as PDF
     outfile_pdf = Path(outdir) / outname
     plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight")
@@ -256,204 +246,124 @@ def plot_bw(df, outdir, outname, legend=True):
 
 
 def plot_iops(df, outdir, outname="", legend=True):
-    fig, ax = plt.subplots(figsize=(figwidth_half, 2.5))
+    fig, ax = plt.subplots(
+        figsize=(figwidth_full / 1.2, 2.5)
+    )  # Made wider for more bars
 
-    ## randread
-    iops = df[(df["jobname"] == "iops randread")].reset_index()
-    ## select median
-    names = iops["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = iops[iops["name"] == name]["read_iops_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = iops.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    iops = pd.concat(dfs)
-    print(iops)
+    # Handle all IOPS jobs including your existing mixed workloads
+    iops_jobs = [
+        ("iops read", "read_iops_mean", "read_iops_stddev"),
+        ("iops write", "write_iops_mean", "write_iops_stddev"),
+        ("iops randread", "read_iops_mean", "read_iops_stddev"),
+        ("iops randwrite", "write_iops_mean", "write_iops_stddev"),
+    ]
+
+    iops_data = []
+
+    for job_name, metric, error_metric in iops_jobs:
+        job_df = df[df["jobname"] == job_name].reset_index()
+        if job_df.empty:
+            continue
+
+        # Select median for each system
+        names = job_df["name"].unique()
+        for name in names:
+            if metric == "combined":
+                # For mixed workloads, combine read and write IOPS
+                job_df["iops_mean"] = (
+                    job_df["read_iops_mean"] + job_df["write_iops_mean"]
+                )
+                ranks = job_df[job_df["name"] == name]["iops_mean"].rank(pct=True)
+                close_to_median = abs(ranks - 0.5)
+                idx = close_to_median.idxmin()
+                row = job_df.loc[idx].copy()
+                row["metric_value"] = row["iops_mean"]
+                row["error_value"] = 0  # No error bars for combined metrics
+            else:
+                ranks = job_df[job_df["name"] == name][metric].rank(pct=True)
+                close_to_median = abs(ranks - 0.5)
+                idx = close_to_median.idxmin()
+                row = job_df.loc[idx].copy()
+                row["metric_value"] = row[metric]
+                row["error_value"] = row[error_metric] if error_metric else 0
+
+            iops_data.append(row)
+
+    if not iops_data:
+        print("No IOPS data found")
+        return
+
+    iops_df = pd.DataFrame(iops_data)
+
+    # Create the plot
     ax = sns.barplot(
-        data=iops,
+        data=iops_df,
         x="jobname",
-        y="read_iops_mean",
+        y="metric_value",
         hue="name",
         palette=palette,
         edgecolor="k",
         linewidth=1.0,
-        legend=True,
     )
+
+    # Add error bars where applicable
     h, l = ax.get_legend_handles_labels()
     x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax.patches]
     y_coords = [p.get_height() for p in ax.patches]
-    n = len(x_coords) // 2
-    ax.errorbar(
-        x=x_coords[:n],
-        y=y_coords[:n],
-        yerr=iops["read_iops_stddev"],
-        fmt="none",
-        c="k",
-        elinewidth=0.8,
-    )
-    ax.get_legend().set_title("")
-    for i, bar in enumerate(ax.patches[:n]):
-        bar.set_hatch(hatches[i])
-    for i, handle in enumerate(ax.get_legend().legend_handles):
-        handle.set_hatch(hatches[i])
+    n = len(l)  # number of systems
 
-    ## randwrite
-    iops = df[(df["jobname"] == "iops randwrite")].reset_index()
-    ## select median
-    names = iops["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = iops[iops["name"] == name]["write_iops_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = iops.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    iops = pd.concat(dfs)
-    ax = sns.barplot(
-        data=iops,
-        x="jobname",
-        y="write_iops_mean",
-        hue="name",
-        palette=palette,
-        edgecolor="k",
-        linewidth=1.0,
-        legend=False,
-    )
-    h, l = ax.get_legend_handles_labels()
-    x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax.patches]
-    y_coords = [p.get_height() for p in ax.patches]
-    ax.errorbar(
-        x=x_coords[n * 2 :],
-        y=y_coords[n * 2 :],
-        yerr=iops["write_iops_stddev"],
-        fmt="none",
-        c="k",
-        elinewidth=0.8,
-    )
-    ax.get_legend().set_title("")
-    for i, bar in enumerate(ax.patches[:n]):
-        bar.set_hatch(hatches[i])
-    for i, handle in enumerate(ax.get_legend().legend_handles):
-        handle.set_hatch(hatches[i])
+    job_names = iops_df["jobname"].unique()
+    for i, job in enumerate(job_names):
+        job_data = iops_df[iops_df["jobname"] == job]
+        if not job_data.empty and job_data["error_value"].sum() > 0:
+            start_idx = i * n
+            end_idx = start_idx + len(job_data)
+            ax.errorbar(
+                x=x_coords[start_idx:end_idx],
+                y=y_coords[start_idx:end_idx],
+                yerr=job_data["error_value"],
+                fmt="none",
+                c="k",
+                elinewidth=0.8,
+            )
 
-    ## mixread70
-    iops = df[(df["jobname"] == "iops rwmixread")].reset_index()
-    # create table with read_iops_mean + write_iops_mean
-    iops["iops_mean"] = iops["read_iops_mean"] + iops["write_iops_mean"]
-    ## select median
-    names = iops["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = iops[iops["name"] == name]["iops_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = iops.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    iops = pd.concat(dfs)
-    # plot read_iops_mean
-    ax = sns.barplot(
-        data=iops,
-        x="jobname",
-        y="iops_mean",
-        # y="read_iops_mean",
-        hue="name",
-        palette=palette,
-        edgecolor="k",
-        linewidth=1.0,
-        legend=False,
-    )
-    # sns.barplot(
-    #    data=iops,
-    #    x="jobname",
-    #    y="write_iops_mean",
-    #    hue="name",
-    #    palette=palette,
-    #    edgecolor="k",
-    #    linewidth=1.0,
-    #    legend=False,
-    #    bottom=iops["read_iops_mean"],
-    # )
-    ax.get_legend().set_title("")
-    for i, bar in enumerate(ax.patches[:n]):
-        bar.set_hatch(hatches[i])
-    for i, handle in enumerate(ax.get_legend().legend_handles):
-        handle.set_hatch(hatches[i])
+    if ax.get_legend():
+        ax.get_legend().set_title("")
 
-    ## mixread30
-    iops = df[(df["jobname"] == "iops rwmixwrite")].reset_index()
-    iops["iops_mean"] = iops["read_iops_mean"] + iops["write_iops_mean"]
-    iops.reset_index()
-    ## select median
-    names = iops["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = iops[iops["name"] == name]["iops_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = iops.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    iops = pd.concat(dfs)
-    ax = sns.barplot(
-        data=iops,
-        x="jobname",
-        y="iops_mean",
-        # y="read_iops_mean",
-        hue="name",
-        palette=palette,
-        edgecolor="k",
-        linewidth=1.0,
-        legend=False,
-    )
-    # sns.barplot(
-    #    data=iops,
-    #    x="jobname",
-    #    y="write_iops_mean",
-    #    hue="name",
-    #    palette=palette,
-    #    edgecolor="k",
-    #    linewidth=1.0,
-    #    legend=False,
-    #    bottom=iops["read_iops_mean"],
-    # )
-    i = 0
-    while i < len(ax.patches):
-        j = 0
-        for j in range(n):
-            ax.patches[i + j].set_hatch(hatches[j])
-        i += n
-
-    # apply hatch
-    # for i, bar in enumerate(ax.patches[n * 2 :]):
-    #    bar.set_hatch(hatches[i % n])
-
-    # put numbers on top of bars
+    # Put numbers on top of bars
     for i, p in enumerate(ax.patches):
         height = p.get_height()
         if height == 0.0:
             continue
         ax.text(
             x=p.get_x() + p.get_width() / 2.0,
-            y=height + 2000,
-            # s=f"{height/1000:.2f}",
+            y=height + height * 0.05,
             s=f"{height/1000:.0f}",
             ha="center",
-            # rotation=90,
         )
 
     ax.yaxis.set_major_formatter(
         mpl.ticker.FuncFormatter(lambda val, pos: f"{val/1000:g}")
     )
 
+    # Set appropriate labels based on what jobs are present
+    job_labels = []
+    for job_name, _, _ in iops_jobs:
+        if job_name in iops_df["jobname"].values:
+            if job_name == "iops read":
+                job_labels.append("Seq Read")
+            elif job_name == "iops write":
+                job_labels.append("Seq Write")
+            elif job_name == "iops randread":
+                job_labels.append("Rand Read")
+            elif job_name == "iops randwrite":
+                job_labels.append("Rand Write")
+
+    ax.set_xticklabels(job_labels, fontsize=TICK_FONTSIZE)
+
     sns.move_legend(
         ax,
         "lower center",
-        # bbox_to_anchor=(0.5, 0),
         ncol=5,
         title=None,
         frameon=True,
@@ -462,18 +372,12 @@ def plot_iops(df, outdir, outname="", legend=True):
     if not legend:
         plt.legend([], [], frameon=False)
 
-    # ax.set(xticklabels=["readread", "randwrite", "mixread70",
-    #                     "mixread30"])
-    # ax.set_xticklabels(["Randread", "Randwrite", "Mixrw(read70)",
-    #                     "Mixrw(read30)"], rotation=45)
-    ax.set_xticklabels(["RandR", "RandW", "RRW70", "RRW30"], rotation=30)
-    # sns.despine()
-    # plt.ylabel("4KB Throughput [K IOPS]")
     plt.ylabel("Throughput [K IOPS]")
     plt.xlabel("")
-    plt.title("Higher is better ↑", fontsize=9, color="navy", weight="bold")
+    plt.title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
     sns.despine(top=True)
     plt.tight_layout()
+
     # Save as PDF
     outfile_pdf = Path(outdir) / outname
     plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight")
@@ -486,168 +390,97 @@ def plot_iops(df, outdir, outname="", legend=True):
 
 
 def plot_latency(df, outdir, outname, legend=True):
-    fig, ax = plt.subplots(figsize=(figwidth_half, 2.5))
+    fig, ax = plt.subplots(figsize=(figwidth_full / 1.5, 2.5))
 
-    ## read
-    lat = df[(df["jobname"] == "alat read")].reset_index()
-    ## select median
-    names = lat["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = lat[lat["name"] == name]["read_lat_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = lat.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    lat = pd.concat(dfs)
+    # Handle all latency jobs - updated to use "lat" prefix instead of "alat"
+    lat_jobs = [
+        ("lat read", "read_lat_mean", "read_lat_dev"),
+        ("lat write", "write_lat_mean", "write_lat_dev"),
+        ("lat randread", "read_lat_mean", "read_lat_dev"),
+        ("lat randwrite", "write_lat_mean", "write_lat_dev"),
+    ]
+
+    lat_data = []
+
+    for job_name, metric, error_metric in lat_jobs:
+        job_df = df[df["jobname"] == job_name].reset_index()
+        if job_df.empty:
+            continue
+
+        # Select median for each system
+        names = job_df["name"].unique()
+        for name in names:
+            ranks = job_df[job_df["name"] == name][metric].rank(pct=True)
+            close_to_median = abs(ranks - 0.5)
+            idx = close_to_median.idxmin()
+            row = job_df.loc[idx].copy()
+            row["metric_value"] = row[metric]
+            row["error_value"] = row[error_metric]
+            lat_data.append(row)
+
+    if not lat_data:
+        print("No latency data found")
+        return
+
+    lat_df = pd.DataFrame(lat_data)
+
+    # Create the plot
     ax = sns.barplot(
-        data=lat,
+        data=lat_df,
         x="jobname",
-        y="read_lat_mean",
+        y="metric_value",
         hue="name",
         palette=palette,
         edgecolor="k",
         linewidth=1.0,
-        legend=True,
     )
-    ax.get_legend().set_title("")
-    n = len(ax.patches) // 2
+
+    # Add error bars
     h, l = ax.get_legend_handles_labels()
     x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax.patches]
     y_coords = [p.get_height() for p in ax.patches]
-    ax.errorbar(
-        x=x_coords[:n], y=y_coords[:n], yerr=lat["read_lat_dev"], fmt="none", c="k"
-    )
+    n = len(l)  # number of systems
 
-    ## write
-    lat = df[(df["jobname"] == "alat write")].reset_index()
-    ## select median
-    names = lat["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = lat[lat["name"] == name]["write_lat_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = lat.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    lat = pd.concat(dfs)
-    ax = sns.barplot(
-        data=lat,
-        x="jobname",
-        y="write_lat_mean",
-        hue="name",
-        palette=palette,
-        edgecolor="k",
-        linewidth=1.0,
-        legend=False,
-    )
-    h, l = ax.get_legend_handles_labels()
-    x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax.patches]
-    y_coords = [p.get_height() for p in ax.patches]
-    ax.errorbar(
-        x=x_coords[n * 2 :],
-        y=y_coords[n * 2 :],
-        yerr=lat["write_lat_dev"],
-        fmt="none",
-        c="k",
-    )
+    job_names = lat_df["jobname"].unique()
+    for i, job in enumerate(job_names):
+        job_data = lat_df[lat_df["jobname"] == job]
+        if not job_data.empty:
+            start_idx = i * n
+            end_idx = start_idx + len(job_data)
+            ax.errorbar(
+                x=x_coords[start_idx:end_idx],
+                y=y_coords[start_idx:end_idx],
+                yerr=job_data["error_value"],
+                fmt="none",
+                c="k",
+            )
 
-    ## randread
-    lat = df[(df["jobname"] == "alat randread")].reset_index()
-    ## select median
-    names = lat["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = lat[lat["name"] == name]["read_lat_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = lat.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    lat = pd.concat(dfs)
-    ax = sns.barplot(
-        data=lat,
-        x="jobname",
-        y="read_lat_mean",
-        hue="name",
-        palette=palette,
-        edgecolor="k",
-        linewidth=1.0,
-        legend=False,
-    )
-    h, l = ax.get_legend_handles_labels()
-    x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax.patches]
-    y_coords = [p.get_height() for p in ax.patches]
-    ax.errorbar(
-        x=x_coords[n * 3 :],
-        y=y_coords[n * 3 :],
-        yerr=lat["read_lat_dev"],
-        fmt="none",
-        c="k",
-    )
+    if ax.get_legend():
+        ax.get_legend().set_title("")
 
-    ## randwrite
-    lat = df[(df["jobname"] == "alat randwrite")].reset_index()
-    ## select median
-    names = lat["name"].unique()
-    dfs = []
-    for name in names:
-        ranks = lat[lat["name"] == name]["write_lat_mean"].rank(pct=True)
-        close_to_median = abs(ranks - 0.5)
-        idx = close_to_median.idxmin()
-        a = lat.loc[idx]
-        a = pd.DataFrame(a).T
-        dfs.append(a)
-    lat = pd.concat(dfs)
-    ax = sns.barplot(
-        data=lat,
-        x="jobname",
-        y="write_lat_mean",
-        hue="name",
-        palette=palette,
-        edgecolor="k",
-        linewidth=1.0,
-        legend=False,
-    )
-    h, l = ax.get_legend_handles_labels()
-    x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax.patches]
-    y_coords = [p.get_height() for p in ax.patches]
-    ax.errorbar(
-        x=x_coords[n * 4 :],
-        y=y_coords[n * 4 :],
-        yerr=lat["write_lat_dev"],
-        fmt="none",
-        c="k",
-    )
-    for i, bar in enumerate(ax.patches):
-        bar.set_hatch(hatches[i % n])
-    for i, handle in enumerate(ax.get_legend().legend_handles):
-        handle.set_hatch(hatches[i])
-
-    ax.yaxis.set_major_formatter(
-        mpl.ticker.FuncFormatter(lambda val, pos: f"{val/1000:g}")
-    )
-
-    # put numbers on top of bars
+    # Put numbers on top of bars
     for i, p in enumerate(ax.patches):
         height = p.get_height()
         if height == 0.0:
             continue
         ax.text(
             x=p.get_x() + p.get_width() / 2.0,
-            y=height + 2000,
-            # s=f"{height/1000:.2f}",
+            y=height + height * 0.05,
             s=f"{height/1000:.0f}",
             ha="center",
-            # rotation=90,
         )
+
+    ax.yaxis.set_major_formatter(
+        mpl.ticker.FuncFormatter(lambda val, pos: f"{val/1000:g}")
+    )
+
+    ax.set_xticklabels(
+        ["Seq Read", "Seq Write", "Rand Read", "Rand Write"], fontsize=TICK_FONTSIZE
+    )
 
     sns.move_legend(
         ax,
         "upper center",
-        # bbox_to_anchor=(0.5, -0.0),
         ncol=3,
         title=None,
         frameon=True,
@@ -656,14 +489,12 @@ def plot_latency(df, outdir, outname, legend=True):
     if not legend:
         plt.legend([], [], frameon=False)
 
-    # ax.set(xticklabels=["read", "write", "randread", "randwrite"], rotation=90)
-    # ax.set_xticklabels(["Read", "Write", "Randread", "Randwrite"], rotation=45)
-    ax.set_xticklabels(["Read", "Write", "RandR", "RandW"], rotation=30)
     plt.ylabel("4KB Latency [us]")
     plt.xlabel("")
-    plt.title("Lower is better ↓", fontsize=9, color="navy", weight="bold")
+    plt.title("Lower is better ↓", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
     sns.despine(top=True)
     plt.tight_layout()
+
     # Save as PDF
     outfile_pdf = Path(outdir) / outname
     plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight")
@@ -672,6 +503,249 @@ def plot_latency(df, outdir, outname, legend=True):
     outfile_png = Path(outdir) / outname.replace(".pdf", ".png")
     plt.savefig(outfile_png, format="png", pad_inches=0, bbox_inches="tight", dpi=300)
     print(f"PNG saved to {outfile_png}")
+    plt.clf()
+
+
+def plot_throughput_latency_combined(df, outdir, outname, legend=True):
+    """Create side-by-side subplots for throughput (IOPS) and latency"""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.5))
+
+    # Throughput subplot (left)
+    iops_jobs = [
+        ("iops read", "read_iops_mean", "read_iops_stddev"),
+        ("iops write", "write_iops_mean", "write_iops_stddev"),
+        ("iops randread", "read_iops_mean", "read_iops_stddev"),
+        ("iops randwrite", "write_iops_mean", "write_iops_stddev"),
+    ]
+
+    iops_data = []
+    for job_name, metric, error_metric in iops_jobs:
+        job_df = df[df["jobname"] == job_name].reset_index()
+        if job_df.empty:
+            continue
+
+        names = job_df["name"].unique()
+        for name in names:
+            ranks = job_df[job_df["name"] == name][metric].rank(pct=True)
+            close_to_median = abs(ranks - 0.5)
+            idx = close_to_median.idxmin()
+            row = job_df.loc[idx].copy()
+            row["metric_value"] = row[metric]
+            row["error_value"] = row[error_metric] if error_metric else 0
+            iops_data.append(row)
+
+    if iops_data:
+        iops_df = pd.DataFrame(iops_data)
+
+        sns.barplot(
+            data=iops_df,
+            x="jobname",
+            y="metric_value",
+            hue="name",
+            palette=palette,
+            edgecolor="k",
+            linewidth=0.6,
+            ax=ax1,
+        )
+
+        # Add error bars for throughput
+        h, l = ax1.get_legend_handles_labels()
+        x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax1.patches]
+        y_coords = [p.get_height() for p in ax1.patches]
+        n = len(l)
+
+        # Store error values for positioning annotations
+        error_heights = []
+        job_names = iops_df["jobname"].unique()
+        for i, job in enumerate(job_names):
+            job_data = iops_df[iops_df["jobname"] == job]
+            if not job_data.empty and job_data["error_value"].sum() > 0:
+                start_idx = i * n
+                end_idx = start_idx + len(job_data)
+                ax1.errorbar(
+                    x=x_coords[start_idx:end_idx],
+                    y=y_coords[start_idx:end_idx],
+                    yerr=job_data["error_value"],
+                    fmt="none",
+                    c="k",
+                    elinewidth=0.6,
+                )
+                # Store error values for annotation positioning
+                for val in job_data["error_value"]:
+                    error_heights.append(val)
+            else:
+                for _ in range(len(job_data) if not job_data.empty else n):
+                    error_heights.append(0)
+
+        # Format throughput plot
+        ax1.yaxis.set_major_formatter(
+            mpl.ticker.FuncFormatter(lambda val, pos: f"{val/1000:g}")
+        )
+        ax1.set_xticklabels(
+            ["Seq Read", "Seq Write", "Rand Read", "Rand Write"],
+            fontsize=TICK_FONTSIZE,
+            rotation=20,
+        )
+        ax1.tick_params(axis="x", length=3, pad=0)  # Remove x-axis tick bars
+        ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
+        ax1.set_ylabel("Throughput [K IOPS]", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax1.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax1.set_title(
+            "Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3
+        )
+
+        # Put numbers on top of bars for throughput
+        for i, p in enumerate(ax1.patches):
+            height = p.get_height()
+            if height == 0.0:
+                continue
+            # Get the error value for this bar (if available)
+            error_val = error_heights[i] if i < len(error_heights) else 0
+            ax1.text(
+                x=p.get_x() + p.get_width() / 1.5,
+                y=height + error_val + height * 0.03,
+                s=f"{height/1000:.0f}",
+                ha="center",
+                va="bottom",
+                rotation=90,  # Vertical orientation
+                fontsize=ANNOTATION_FONTSIZE,
+            )
+
+    # Latency subplot (right)
+    lat_jobs = [
+        ("lat read", "read_lat_mean", "read_lat_dev"),
+        ("lat write", "write_lat_mean", "write_lat_dev"),
+        ("lat randread", "read_lat_mean", "read_lat_dev"),
+        ("lat randwrite", "write_lat_mean", "write_lat_dev"),
+    ]
+
+    lat_data = []
+    for job_name, metric, error_metric in lat_jobs:
+        job_df = df[df["jobname"] == job_name].reset_index()
+        if job_df.empty:
+            continue
+
+        names = job_df["name"].unique()
+        for name in names:
+            ranks = job_df[job_df["name"] == name][metric].rank(pct=True)
+            close_to_median = abs(ranks - 0.5)
+            idx = close_to_median.idxmin()
+            row = job_df.loc[idx].copy()
+            row["metric_value"] = row[metric]
+            row["error_value"] = row[error_metric]
+            lat_data.append(row)
+
+    if lat_data:
+        lat_df = pd.DataFrame(lat_data)
+
+        sns.barplot(
+            data=lat_df,
+            x="jobname",
+            y="metric_value",
+            hue="name",
+            palette=palette,
+            edgecolor="k",
+            linewidth=0.6,
+            ax=ax2,
+            legend=False,  # Remove legend from second plot to avoid duplication
+        )
+
+        # Add error bars for latency
+        x_coords = [p.get_x() + 0.5 * p.get_width() for p in ax2.patches]
+        y_coords = [p.get_height() for p in ax2.patches]
+
+        # Store error values for positioning annotations
+        error_heights_lat = []
+        job_names = lat_df["jobname"].unique()
+        for i, job in enumerate(job_names):
+            job_data = lat_df[lat_df["jobname"] == job]
+            if not job_data.empty:
+                start_idx = i * n
+                end_idx = start_idx + len(job_data)
+                ax2.errorbar(
+                    x=x_coords[start_idx:end_idx],
+                    y=y_coords[start_idx:end_idx],
+                    yerr=job_data["error_value"],
+                    fmt="none",
+                    c="k",
+                    elinewidth=0.6,
+                )
+                # Store error values for annotation positioning
+                for val in job_data["error_value"]:
+                    error_heights_lat.append(val)
+            else:
+                for _ in range(len(job_data) if not job_data.empty else n):
+                    error_heights_lat.append(0)
+
+        # Format latency plot
+        ax2.yaxis.set_major_formatter(
+            mpl.ticker.FuncFormatter(lambda val, pos: f"{val/1000:g}")
+        )
+        ax2.set_xticklabels(
+            ["Seq Read", "Seq Write", "Rand Read", "Rand Write"],
+            fontsize=TICK_FONTSIZE,
+            rotation=20,
+        )
+        ax2.tick_params(axis="x", length=3, pad=0)  # Remove x-axis tick bars
+        ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
+        ax2.set_ylabel("4KB Latency [us]", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax2.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax2.set_title("Lower is better ↓", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
+
+        # Put numbers on top of bars for latency
+        for i, p in enumerate(ax2.patches):
+            height = p.get_height()
+            if height == 0.0:
+                continue
+            # Get the error value for this bar (if available)
+            error_val = error_heights_lat[i] if i < len(error_heights_lat) else 0
+            ax2.text(
+                x=p.get_x() + p.get_width() / 1.5,
+                y=height + error_val + height * 0.03,
+                s=f"{height/1000:.0f}",
+                ha="center",
+                va="bottom",
+                rotation=90,  # Vertical orientation
+                fontsize=ANNOTATION_FONTSIZE,
+            )
+
+    # Remove any existing legends from axes
+    if ax1.get_legend():
+        ax1.get_legend().remove()
+    if ax2.get_legend():
+        ax2.get_legend().remove()
+
+    # Set up legend using fig.legend() directly
+    if legend and iops_data:
+        # Get handles and labels from the first subplot
+        handles, labels = ax1.get_legend_handles_labels()
+        if handles:
+            # Create figure-level legend
+            fig.legend(
+                handles,
+                labels,
+                loc="upper center",
+                ncol=n,
+                bbox_to_anchor=(0.5, 1.1),
+                frameon=True,
+                fontsize=LEGEND_FONTSIZE,
+                columnspacing=1.5,
+            )
+
+    # Remove top spines
+    sns.despine(top=True, ax=ax1)
+    sns.despine(top=True, ax=ax2)
+
+    plt.tight_layout()
+
+    # Save as PDF
+    outfile_pdf = Path(outdir) / outname
+    plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight")
+    print(f"Combined PDF saved to {outfile_pdf}")
+    # Save as PNG
+    outfile_png = Path(outdir) / outname.replace(".pdf", ".png")
+    plt.savefig(outfile_png, format="png", pad_inches=0, bbox_inches="tight", dpi=300)
+    print(f"Combined PNG saved to {outfile_png}")
     plt.clf()
 
 
@@ -698,8 +772,8 @@ def plot_fio(
     pcvm = ""
     if cvm == "snp":
         vm = "amd"
-        vm_label = "vm"
-        cvm_label = "snp"
+        vm_label = "VM"
+        cvm_label = "SNP"
     else:
         vm = "intel"
         vm_label = "vm"
@@ -712,20 +786,18 @@ def plot_fio(
 
     dfs = []
     dfs.append(read_result(f"{vm}-disk-{size}{pvm}-{aio}", vm_label, jobfile))
-    if swiotlb and not poll:
-        dfs.append(
-            read_result(f"{vm}-disk-{size}-{aio}{pvm}-swiotlb", "swiotlb", jobfile)
+    dfs.append(
+        read_result(
+            f"{vm}-disk-{size}-{aio}{pvm}-swiotlb", f"{vm_label}-swiotlb", jobfile
         )
+    )
     dfs.append(read_result(f"{cvm}-disk-{size}{pcvm}-{aio}", cvm_label, jobfile))
-    if all:
-        dfs.append(
-            read_result(f"{cvm}-disk-{size}-poll-{aio}", f"{cvm_label}-poll", jobfile)
-        )
-        # dfs.append(
-        #    read_result(
-        #        f"{vm}-disk-{size}-poll-{aio}", f"{vm_label}-poll", jobfile
-        #    )
-        # )
+    dfs.append(
+        read_result(f"{cvm}-disk-{size}-poll-{aio}", f"{cvm_label}-poll", jobfile)
+    )
+    dfs.append(
+        read_result(f"{cvm}-disk-{size}-haltpoll-{aio}", f"{cvm_label}-hpoll", jobfile)
+    )
 
     df = pd.concat(dfs)
     print(df)
@@ -737,10 +809,15 @@ def plot_fio(
     df.to_csv(Path(outdir) / f"fio_{pvm}.csv", index=False)
 
     if all:
-        pvm += "-all"
-    plot_bw(df, outdir, f"fio_bw_{pvm}.pdf", legend=True)
-    plot_iops(df, outdir, f"fio_iops_{pvm}.pdf", legend=False)
-    plot_latency(df, outdir, f"fio_latency_{pvm}.pdf", legend=False)
+        pvm += "all"
+    # plot_bw(df, outdir, f"fio_bw_{pvm}.pdf", legend=True)
+    # plot_iops(df, outdir, f"fio_iops_{pvm}.pdf", legend=False)
+    # plot_latency(df, outdir, f"fio_latency_{pvm}.pdf", legend=False)
+
+    # Generate combined throughput and latency plot
+    plot_throughput_latency_combined(
+        df, outdir, f"fio_throughput_latency_{pvm}.pdf", legend=True
+    )
 
 
 @task
