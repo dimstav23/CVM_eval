@@ -26,38 +26,15 @@ sns.set_context("paper", rc={"font.size": 5, "axes.titlesize": 5, "axes.labelsiz
 figwidth_half = 3.3
 figwidth_full = 7
 
-FONTSIZE = 9
+FONTSIZE = 6
+TITLE_FONTSIZE = FONTSIZE
+LABEL_FONTSIZE = FONTSIZE
+TICK_FONTSIZE = FONTSIZE - 1
+LEGEND_FONTSIZE = FONTSIZE
+ANNOTATION_FONTSIZE = FONTSIZE / 2 - 1
 
-pastel = sns.color_palette("pastel")
-# palette = sns.color_palette("pastel")
-vm_col = pastel[0]
-swiotlb_col = pastel[1]
-vhost_col = pastel[4]
-vshot_swiotlb_col = pastel[5]
-cvm_col = pastel[2]
-cvm_vhost_col = pastel[3]
-poll_col = pastel[6]
-palette = [
-    vm_col,
-    swiotlb_col,
-    vhost_col,
-    vshot_swiotlb_col,
-    cvm_col,
-    cvm_vhost_col,
-    *pastel[6:],
-]
-# hatches = ["", "//"]
-# hatches = ["", "", "", "", "//", "//", "//", "//", "//", "//"]
-hatches = ["", "o", "*", ".", "//", "-", "\\", ".", "o-", "*-"]
-
-palette2 = [vm_col, vhost_col, cvm_col, cvm_vhost_col, *pastel[6:]]
-# hatches2 = ["", "", "//", "//"]
-hatches2 = ["", "*", "//", "+"]
-
-# palette3 = [vm_col, vhost_col, cvm_col, cvm_vhost_col, poll_col, cvm_col, cvm_vhost_col, poll_col]
-palette3 = [vm_col, vhost_col, cvm_col, cvm_vhost_col, *pastel[6:]]
-# hatches3 = ["", "", "//", "//", "//", "x", "x", "x", "x"]
-hatches3 = ["", "*", "//", "-", "\\", ".", "o-", "*-"]
+palette = sns.color_palette("pastel", n_colors=10)
+hatches = ["", "o", "//", "x", ""]
 
 BENCH_RESULT_DIR = Path("./bench-result/network")
 
@@ -102,7 +79,8 @@ def parse_iperf_result(
     elif mode == "udp":
         pktsize = [64, 128, 256, 512, 1024, 1460]
     elif mode == "tcp":
-        pktsize = [64, 128, 256, 512, 1024, "32K", "128K"]
+        # pktsize = [64, 128, 256, 512, 1024, "32K", "128K"]
+        pktsize = [256, "4K", "32K", "128K"]
     else:
         raise ValueError(f"Invalid mode: {mode}")
 
@@ -123,48 +101,6 @@ def parse_iperf_result(
     return df
 
 
-def parse_ping_result(name: str, label: str, date=None, all=False) -> pd.DataFrame:
-    if all:
-        pktsize = [64, 128, 256, 512, 1024, 1460]
-        pktsize_actual = [64, 128, 256, 512, 1024, 1460]
-    else:
-        pktsize = [64]
-        pktsize_actual = [64]
-    pktsize_ = []
-    lats = []
-
-    if date is None:
-        # use the latest date
-        date = sorted(os.listdir(BENCH_RESULT_DIR / "ping" / name))[-1]
-
-    print(f"date: {date}")
-
-    for size in pktsize_actual:
-        path = Path(f"{BENCH_RESULT_DIR}/ping/{name}/{date}/{size}.log")
-        if not path.exists():
-            print(f"XXX: {path} not found!")
-            continue
-        with path.open("r") as f:
-            lines = f.readlines()
-
-        # example format:
-        # > 128 bytes from 172.44.0.2: icmp_seq=1 ttl=64 time=0.131 ms
-        # > 128 bytes from 172.44.0.2: icmp_seq=2 ttl=64 time=0.221 ms
-        # > 128 bytes from 172.44.0.2: icmp_seq=3 ttl=64 time=0.212 ms
-        # > 128 bytes from 172.44.0.2: icmp_seq=4 ttl=64 time=0.200 ms
-        lats_ = []
-        for line in lines:
-            if "icmp_seq" in line:
-                lats_.append(float(line.split()[6].split("=")[1]))
-        # drop firt 3 pings to get stable result
-        lats_ = lats_[3:]
-        lats.extend(lats_)
-        pktsize_.extend([size] * len(lats_))
-
-    df = pd.DataFrame({"name": label, "size": pktsize_, "latency": lats})
-    return df
-
-
 def parse_memtier_result_sub(
     path: str, label: str, server: str, tls: bool = False
 ) -> pd.DataFrame:
@@ -181,7 +117,7 @@ def parse_memtier_result_sub(
     """
     print(path)
     if tls:
-        tls_ = " (tls)"
+        tls_ = "(tls)"
     else:
         tls_ = ""
     workloads = []
@@ -248,61 +184,11 @@ def parse_memtier_result(
     return df
 
 
-def parse_nginx_result_sub(path: str, name: str, workload: str) -> pd.DataFrame:
-    """
-        Example output:
-    ```
-    Running 10s test @ http://172.44.0.2
-      2 threads and 10 connections
-      Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency    21.41ms    2.07ms  89.21ms   91.82%
-        Req/Sec   234.56     16.83   350.00     83.00%
-      4674 requests in 10.01s, 1.16MB read
-    Requests/sec:    467.10
-    Transfer/sec:    118.60KB
-    ```
-    """
-    with open(path, "r") as f:
-        lines = f.readlines()
-        for line in lines:
-            if "Requests/sec" in line:
-                th = float(line.split()[1])
-                break
-    df = pd.DataFrame({"name": [name], "workload": [workload], "throughput": [th]})
-    return df
-
-
-def parse_nginx_result(
-    name: str, label: str, date=None, max_num: int = 10
-) -> pd.DataFrame:
-    dates = []
-    if date is None:
-        dates = sorted(os.listdir(BENCH_RESULT_DIR / "nginx" / name))[-max_num:]
-    else:
-        dates.append(date)
-
-    dfs = []
-    for date in dates:
-        df = parse_nginx_result_sub(
-            BENCH_RESULT_DIR / "nginx" / name / date / "http.log", label, "http"
-        )
-        df_ssl = parse_nginx_result_sub(
-            BENCH_RESULT_DIR / "nginx" / name / date / "https.log", label, "https"
-        )
-
-        dfs.append(df)
-        dfs.append(df_ssl)
-
-    df = pd.concat(dfs)
-
-    return df
-
-
 @task
 def plot_iperf(
     ctx,
     cvm="snp",
-    mode="udp",
+    mode="tcp",
     vhost=False,
     mq=False,
     tmebypass=False,
@@ -321,8 +207,8 @@ def plot_iperf(
     pcvm = ""
     if cvm == "snp":
         vm = "amd"
-        vm_label = "vm"
-        cvm_label = "snp"
+        vm_label = "VM"
+        cvm_label = "SNP"
     else:
         vm = "intel"
         vm_label = "vm"
@@ -347,48 +233,52 @@ def plot_iperf(
     dfs.append(parse_iperf_result(get_name(vm, pvm), vm_label, mode, pkt=pkt))
     dfs.append(
         parse_iperf_result(
-            get_name(vm, pvm, vhost=False, swiotlb=True), f"swiotlb", mode, pkt=pkt
+            get_name(vm, pvm, vhost=False, swiotlb=True),
+            f"{vm_label}-swiotlb",
+            mode,
+            pkt=pkt,
         )
-    )
-    dfs.append(
-        parse_iperf_result(get_name(vm, pvm, vhost=True), f"vhost", mode, pkt=pkt)
     )
     dfs.append(
         parse_iperf_result(
-            get_name(vm, pvm, vhost=True, swiotlb=True), f"vhost-swiotlb", mode, pkt=pkt
+            get_name(vm, pvm, vhost=True), f"{vm_label}-vhost", mode, pkt=pkt
+        )
+    )
+    dfs.append(
+        parse_iperf_result(
+            get_name(vm, pvm, vhost=True, swiotlb=True),
+            f"{vm_label}-vhost-swiotlb",
+            mode,
+            pkt=pkt,
         )
     )
     dfs.append(parse_iperf_result(get_name(cvm, pcvm), cvm_label, mode, pkt=pkt))
-    if plot_all:
-        dfs.append(
-            parse_iperf_result(
-                get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", mode, pkt=pkt
-            )
+    dfs.append(
+        parse_iperf_result(
+            get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", mode, pkt=pkt
         )
-        dfs.append(
-            parse_iperf_result(
-                get_name(cvm, "-poll"), f"{cvm_label}-poll", mode, pkt=pkt
-            )
-        )
+    )
+    dfs.append(
+        parse_iperf_result(get_name(cvm, "-poll"), f"{cvm_label}-poll", mode, pkt=pkt)
+    )
     dfs.append(
         parse_iperf_result(
             get_name(cvm, pcvm, vhost=True), f"{cvm_label}-vhost", mode, pkt=pkt
         )
     )
-    if plot_all:
-        dfs.append(
-            parse_iperf_result(
-                get_name(cvm, "-haltpoll-vhost"),
-                f"{cvm_label}-vhost-hpoll",
-                mode,
-                pkt=pkt,
-            )
+    dfs.append(
+        parse_iperf_result(
+            get_name(cvm, "-haltpoll-vhost"),
+            f"{cvm_label}-vhost-hpoll",
+            mode,
+            pkt=pkt,
         )
-        dfs.append(
-            parse_iperf_result(
-                get_name(cvm, "-poll-vhost"), f"{cvm_label}-vhost-poll", mode, pkt=pkt
-            )
+    )
+    dfs.append(
+        parse_iperf_result(
+            get_name(cvm, "-poll-vhost"), f"{cvm_label}-vhost-poll", mode, pkt=pkt
         )
+    )
     df = pd.concat(dfs)
     print(df)
 
@@ -402,75 +292,30 @@ def plot_iperf(
         ax=ax,
         palette=palette,
         edgecolor="black",
-        err_kws={"linewidth": 1},
+        err_kws={"linewidth": 0.6},
     )
     if pkt is not None:
-        ax.set_xticklabels([])
+        ax.set_xticklabels([], fontsize=TICK_FONTSIZE)
         # ax.set_xlabel(f"Buffer Size {pkt} byte")
-        ax.set_xlabel("")
+        ax.set_xlabel("", fontsize=LABEL_FONTSIZE)
     else:
-        ax.set_xlabel("Packet Size (byte)")
-    ax.set_ylabel("Throughput (Gbps)")
-    ax.set_title("Higher is better ↑", fontsize=FONTSIZE, color="navy")
-
-    # second axis for CPU utilization
-    # if mode == "tcp" and mq:
-    #    print("plot cpu utilization")
-    #    # get x position of each bar
-    #    xpos = []
-    #    for bar in ax.patches[:len(df["name"].unique())]:
-    #        xpos.append(bar.get_x() + bar.get_width() / 2)
-    #    # vm, swiotlb, vhost, vhost-swiotlb, cvm, cvm-vhost
-    #    cpu_util = [6.58, 8.22, 99.78, 100, 100, 100]
-    #    ax2 = ax.twinx()
-    #    ax2.plot(
-    #        xpos,
-    #        cpu_util,
-    #        color="red",
-    #        linestyle="",
-    #        marker="x",
-    #        markersize=2,
-    #    )
-    #    ax2.set_ylabel("Guest CPU Utilization (%)")
-    #    ax2.set_ylim(0, 120)
-    #    ax2.set_yticks(np.arange(0, 121, 20))
-    #    ax2.set_yticklabels([f"{i}" for i in np.arange(0, 121, 20)])
-
+        ax.set_xlabel("Packet Size (byte)", fontsize=LABEL_FONTSIZE)
+    ax.set_ylabel("Throughput (Gbps)", fontsize=LABEL_FONTSIZE)
+    ax.set_title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
+    ax.tick_params(
+        axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1
+    )  # Remove x-axis tick bars
+    ax.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
     # remove legend title
     ax.get_legend().set_title("")
 
-    # set hatch
-    if mode == "udp":
-        pass
-        # bars = ax.patches
-        # hs = []
-        # num_x = len(df["size"].unique())
-        # for hatch in hatches:
-        #    hs.extend([hatch] * num_x)
-        # num_legend = len(bars) - len(hs)
-        # hs.extend([""] * num_legend)
-        # for bar, hatch in zip(bars, hs):
-        #    bar.set_hatch(hatch)
-    else:
-        # for bar in ax.patches[4:6]:
-        #    bar.set_hatch("//")
-        for i, bar in enumerate(ax.patches):
-            patch = hatches[i % len(hatches)]
-            bar.set_hatch(patch)
-
-    plt.legend(fontsize=5)
-
-    if mode != "udp":
-        # set hatch for the legend
-        for i, patch in enumerate(ax.get_legend().get_patches()):
-            patch.set_hatch(hatches[i % len(hatches)])
+    plt.legend(fontsize=LEGEND_FONTSIZE)
 
     # annotate values with .2f
     for container in ax.containers:
-        if mode == "udp":
-            ax.bar_label(container, fmt="%.2f", fontsize=4, rotation=90, padding=2)
-        else:
-            ax.bar_label(container, fmt="%.2f", fontsize=5)
+        ax.bar_label(
+            container, fmt="%.2f", rotation=90, padding=2, fontsize=ANNOTATION_FONTSIZE
+        )
 
     sns.despine(top=True)
     plt.tight_layout()
@@ -490,6 +335,7 @@ def plot_iperf(
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
+
     # Save as PDF
     save_path_pdf = outdir / outname
     plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
@@ -498,157 +344,7 @@ def plot_iperf(
     save_path_png = outdir / outname.replace(".pdf", ".png")
     plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
     print(f"PNG plot saved in {save_path_png}")
-
-
-@task
-def plot_ping(
-    ctx,
-    cvm="snp",
-    vhost=False,
-    mq=False,
-    tmebypass=False,
-    poll=False,
-    outdir="plot",
-    outname=None,
-    size="medium",
-    all=False,
-    result_dir=None,
-):
-    if result_dir is not None:
-        global BENCH_RESULT_DIR
-        BENCH_RESULT_DIR = Path(result_dir)
-    pvm = ""
-    pcvm = ""
-    if cvm == "snp":
-        vm = "amd"
-        vm_label = "vm"
-        cvm_label = "snp"
-    else:
-        vm = "intel"
-        vm_label = "vm"
-        cvm_label = "td"
-        if tmebypass:
-            pvm = "-tmebypass"
-    if poll:
-        pvm += "-poll"
-        pcvm += "-poll"
-
-    def get_name(name, p, vhost=False, mq=mq, swiotlb=False):
-        n = f"{name}-disk-{size}{p}"
-        if vhost:
-            n += "-vhost"
-        if mq:
-            n += "-mq"
-        if swiotlb:
-            n += "-swiotlb"
-        return n
-
-    dfs = []
-    dfs.append(parse_ping_result(get_name(vm, pvm), vm_label, all=all))
-    dfs.append(
-        parse_ping_result(
-            get_name(vm, pvm, vhost=False, swiotlb=True), f"swiotlb", all=all
-        )
-    )
-    dfs.append(parse_ping_result(get_name(vm, pvm, vhost=True), f"vhost", all=all))
-    dfs.append(
-        parse_ping_result(
-            get_name(vm, pvm, vhost=True, swiotlb=True), f"vhost-swiotlb", all=all
-        )
-    )
-    dfs.append(parse_ping_result(get_name(cvm, pcvm), cvm_label, all=all))
-    dfs.append(
-        parse_ping_result(get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", all=all)
-    )
-    dfs.append(parse_ping_result(get_name(cvm, "-poll"), f"{cvm_label}-poll", all=all))
-    dfs.append(
-        parse_ping_result(
-            get_name(cvm, pcvm, vhost=True), f"{cvm_label}-vhost", all=all
-        )
-    )
-    dfs.append(
-        parse_ping_result(
-            get_name(cvm, "-haltpoll", vhost=True), f"{cvm_label}-vhost-hpoll", all=all
-        )
-    )
-    dfs.append(
-        parse_ping_result(
-            get_name(cvm, "-poll", vhost=True), f"{cvm_label}-vhost-poll", all=all
-        )
-    )
-    df = pd.concat(dfs)
-    print(df)
-
-    # plot thropughput
-    fig, ax = plt.subplots(figsize=(figwidth_half, 2.0))
-    sns.barplot(
-        x="size",
-        y="latency",
-        hue="name",
-        data=df,
-        ax=ax,
-        palette=palette,
-        edgecolor="black",
-        err_kws={"linewidth": 1},
-    )
-    if not all:
-        ax.set_xticklabels([])
-        # ax.set_xlabel("Ping (64 byte)")
-        ax.set_xlabel("")
-    else:
-        ax.set_xlabel("Packet Size (byte)")
-    ax.set_ylabel("Latency (ms)")
-    ax.set_title("Lower is better ↓", fontsize=FONTSIZE, color="navy")
-
-    # remove legend title
-    ax.get_legend().set_title("")
-
-    # set hatch
-    bars = ax.patches
-    hs = []
-    num_x = len(df["size"].unique())
-    for hatch in hatches:
-        hs.extend([hatch] * num_x)
-    num_legend = len(bars) - len(hs)
-    hs.extend([""] * num_legend)
-    for bar, hatch in zip(bars, hs):
-        bar.set_hatch(hatch)
-
-    # set hatch for the legend
-    print(ax.get_legend().get_patches())
-    plt.legend(fontsize=5, loc="lower center", ncol=4)
-    for i, patch in enumerate(ax.get_legend().get_patches()):
-        patch.set_hatch(hatches[i % len(hatches)])
-    # for patch in ax.get_legend().get_patches()[4:]:
-    #    patch.set_hatch("//")
-
-    # annotate values with .2f
-    for container in ax.containers:
-        ax.bar_label(container, fmt="%.3f")
-
-    sns.despine(top=True)
-    plt.tight_layout()
-
-    if outname is None:
-        outname = f"ping"
-        if vhost:
-            outname += "_vhost"
-        if mq:
-            outname += "_mq"
-        if all:
-            outname += "_all"
-        outname += f"{pvm}.pdf"
-
-    outdir = Path(outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
-    # Save as PDF
-    save_path_pdf = outdir / outname
-    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
-    print(f"PDF plot saved in {save_path_pdf}")
-    # Save as PNG
-    save_path_png = outdir / outname.replace(".pdf", ".png")
-    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
-    print(f"PNG plot saved in {save_path_png}")
+    plt.clf()
 
 
 @task
@@ -667,8 +363,8 @@ def plot_redis(
         BENCH_RESULT_DIR = Path(result_dir)
     if cvm == "snp":
         vm = "amd"
-        vm_label = "vm"
-        cvm_label = "snp"
+        vm_label = "VM"
+        cvm_label = "SNP"
     else:
         vm = "intel"
         vm_label = "vm"
@@ -684,7 +380,9 @@ def plot_redis(
 
     dfs = []
     dfs.append(parse_memtier_result(get_name(vm), vm_label, "redis"))
-    dfs.append(parse_memtier_result(get_name(vm, vhost=True), f"vhost", "redis"))
+    dfs.append(
+        parse_memtier_result(get_name(vm, vhost=True), f"{vm_label}-vhost", "redis")
+    )
     dfs.append(parse_memtier_result(get_name(cvm), cvm_label, "redis"))
     dfs.append(
         parse_memtier_result(
@@ -719,38 +417,29 @@ def plot_redis(
         hue="name",
         data=df,
         ax=ax,
-        palette=palette2,
+        palette=palette,
         edgecolor="black",
-        err_kws={"linewidth": 1},
+        err_kws={"linewidth": 0.6},
     )
-    ax.set_xlabel("")
-    ax.set_ylabel("Throughput [M req/s]")
-    ax.set_title("Higher is better ↑", fontsize=FONTSIZE, color="navy")
+    ax.set_xlabel("", fontsize=LABEL_FONTSIZE)
+    ax.set_ylabel("Throughput [M req/s]", fontsize=LABEL_FONTSIZE)
+    ax.set_title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
+    ax.tick_params(
+        axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1
+    )  # Remove x-axis tick bars
+    ax.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
 
     # remove legend title
     ax.get_legend().set_title("")
 
     # set legend ncol
-    ax.legend(loc="center", ncol=2, fontsize=5)
-
-    # set hatch
-    bars = ax.patches
-    hs = []
-    num_x = 4
-    for hatch in hatches2:
-        hs.extend([hatch] * num_x)
-    num_legend = len(bars) - len(hs)
-    hs.extend([""] * num_legend)
-    for bar, hatch in zip(bars, hs):
-        bar.set_hatch(hatch)
-
-    # set hatch for the legend
-    for patch in ax.get_legend().get_patches()[2:]:
-        patch.set_hatch("//")
+    ax.legend(loc="center", ncol=2, fontsize=LEGEND_FONTSIZE)
 
     # annotate values with .2f
     for container in ax.containers:
-        ax.bar_label(container, fmt="%.2f")
+        ax.bar_label(
+            container, fmt="%.2f", fontsize=ANNOTATION_FONTSIZE, rotation=90, padding=2
+        )
 
     sns.despine(top=True)
     plt.tight_layout()
@@ -773,250 +462,270 @@ def plot_redis(
     save_path_png = outdir / outname.replace(".pdf", ".png")
     plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
     print(f"PNG plot saved in {save_path_png}")
+    plt.clf()
 
 
 @task
-def plot_memcached(
+def plot_network(
     ctx,
     cvm="snp",
+    mode="tcp",
     vhost=False,
     mq=False,
+    tmebypass=False,
+    poll=False,
     outdir="plot",
     outname=None,
     size="medium",
+    pkt=None,
     result_dir=None,
 ):
+    """Create a combined plot with iperf and redis subplots side by side"""
     if result_dir is not None:
         global BENCH_RESULT_DIR
         BENCH_RESULT_DIR = Path(result_dir)
+
+    pvm = ""
+    pcvm = ""
     if cvm == "snp":
         vm = "amd"
-        vm_label = "vm"
-        cvm_label = "snp"
+        vm_label = "VM"
+        cvm_label = "SNP"
     else:
         vm = "intel"
         vm_label = "vm"
         cvm_label = "td"
+        if tmebypass:
+            pvm = "-tmebypass"
+    if poll:
+        pvm += "-poll"
+        pcvm += "-poll"
 
-    def get_name(name, vhost=False, p="", mq=mq):
+    def get_name(name, p, vhost=False, mq=mq, swiotlb=False):
         n = f"{name}-disk-{size}{p}"
         if vhost:
             n += "-vhost"
         if mq:
             n += "-mq"
+        if swiotlb:
+            n += "-swiotlb"
         return n
 
-    dfs = []
-    dfs.append(parse_memtier_result(get_name(vm), vm_label, "memcached"))
-    dfs.append(parse_memtier_result(get_name(vm, vhost=True), f"vhost", "memcached"))
-    dfs.append(parse_memtier_result(get_name(cvm), cvm_label, "memcached"))
-    dfs.append(
-        parse_memtier_result(
-            get_name(cvm, p="-haltpoll"), f"{cvm_label}-hpoll", "memcached"
+    # Parse iperf data
+    iperf_dfs = []
+    iperf_dfs.append(parse_iperf_result(get_name(vm, pvm), vm_label, mode, pkt=pkt))
+    iperf_dfs.append(
+        parse_iperf_result(
+            get_name(vm, pvm, vhost=False, swiotlb=True),
+            f"{vm_label}-swiotlb",
+            mode,
+            pkt=pkt,
         )
     )
-    dfs.append(
-        parse_memtier_result(get_name(cvm, p="-poll"), f"{cvm_label}-poll", "memcached")
-    )
-    dfs.append(
-        parse_memtier_result(
-            get_name(cvm, vhost=True), f"{cvm_label}-vhost", "memcached"
+    iperf_dfs.append(
+        parse_iperf_result(
+            get_name(vm, pvm, vhost=True), f"{vm_label}-vhost", mode, pkt=pkt
         )
     )
-    dfs.append(
-        parse_memtier_result(
-            get_name(cvm, vhost=True, p="-haltpoll"),
-            f"{cvm_label}-hpoll-vhost",
-            "memcached",
+    iperf_dfs.append(
+        parse_iperf_result(
+            get_name(vm, pvm, vhost=True, swiotlb=True),
+            f"{vm_label}-vhost-swiotlb",
+            mode,
+            pkt=pkt,
         )
     )
-    dfs.append(
-        parse_memtier_result(
-            get_name(cvm, vhost=True, p="-poll"), f"{cvm_label}-poll-vhost", "memcached"
+    iperf_dfs.append(parse_iperf_result(get_name(cvm, pcvm), cvm_label, mode, pkt=pkt))
+    iperf_dfs.append(
+        parse_iperf_result(
+            get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", mode, pkt=pkt
         )
     )
-    df = pd.concat(dfs)
-    print(df)
+    iperf_dfs.append(
+        parse_iperf_result(get_name(cvm, "-poll"), f"{cvm_label}-poll", mode, pkt=pkt)
+    )
+    iperf_dfs.append(
+        parse_iperf_result(
+            get_name(cvm, pcvm, vhost=True), f"{cvm_label}-vhost", mode, pkt=pkt
+        )
+    )
+    iperf_dfs.append(
+        parse_iperf_result(
+            get_name(cvm, "-haltpoll-vhost"),
+            f"{cvm_label}-vhost-hpoll",
+            mode,
+            pkt=pkt,
+        )
+    )
+    iperf_dfs.append(
+        parse_iperf_result(
+            get_name(cvm, "-poll-vhost"), f"{cvm_label}-vhost-poll", mode, pkt=pkt
+        )
+    )
+    iperf_df = pd.concat(iperf_dfs)
 
-    fig, ax = plt.subplots(figsize=(figwidth_half, 2.0))
+    # Parse redis data
+    redis_dfs = []
+    redis_dfs.append(parse_memtier_result(get_name(vm, ""), vm_label, "redis"))
+    redis_dfs.append(
+        parse_memtier_result(
+            get_name(vm, pvm, vhost=False, swiotlb=True), f"{vm_label}-swiotlb", "redis"
+        )
+    )
+    redis_dfs.append(
+        parse_memtier_result(get_name(vm, "", vhost=True), f"{vm_label}-vhost", "redis")
+    )
+    redis_dfs.append(
+        parse_memtier_result(
+            get_name(vm, pvm, vhost=True, swiotlb=True),
+            f"{vm_label}-vhost-swiotlb",
+            "redis",
+        )
+    )
+    redis_dfs.append(parse_memtier_result(get_name(cvm, ""), cvm_label, "redis"))
+    redis_dfs.append(
+        parse_memtier_result(get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", "redis")
+    )
+    redis_dfs.append(
+        parse_memtier_result(get_name(cvm, "-poll"), f"{cvm_label}-poll", "redis")
+    )
+    redis_dfs.append(
+        parse_memtier_result(
+            get_name(cvm, "", vhost=True), f"{cvm_label}-vhost", "redis"
+        )
+    )
+    redis_dfs.append(
+        parse_memtier_result(
+            get_name(cvm, "-haltpoll", vhost=True),
+            f"{cvm_label}-vhost-hpoll",
+            "redis",
+        )
+    )
+    redis_dfs.append(
+        parse_memtier_result(
+            get_name(cvm, "-poll", vhost=True), f"{cvm_label}-vhost-poll", "redis"
+        )
+    )
+    redis_df = pd.concat(redis_dfs)
+
+    print("Iperf data:")
+    print(iperf_df)
+    print("\nRedis data:")
+    print(redis_df)
+
+    # Create combined figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.5))
+
+    # Iperf subplot (left)
     sns.barplot(
-        x="workload",
+        x="size",
         y="throughput",
         hue="name",
-        data=df,
-        ax=ax,
-        palette=palette3,
+        data=iperf_df,
+        ax=ax1,
+        palette=palette,
         edgecolor="black",
-        err_kws={"linewidth": 1},
+        err_kws={"linewidth": 0.6},
+        linewidth=0.6,
     )
-    ax.set_xlabel("")
-    ax.set_ylabel("Throughput [M req/s]")
-    ax.set_title("Higher is better ↑", fontsize=FONTSIZE, color="navy")
 
-    # remove legend title
-    ax.get_legend().set_title("")
-
-    # set legend ncol
-    ax.legend(loc="best", ncol=2, fontsize=5)
-
-    # set hatch
-    bars = ax.patches
-    hs = []
-    num_x = 4
-    for hatch in hatches3:
-        hs.extend([hatch] * num_x)
-    num_legend = len(bars) - len(hs)
-    hs.extend([""] * num_legend)
-    for bar, hatch in zip(bars, hs):
-        bar.set_hatch(hatch)
-
-    # set hatch for the legend
-    # for patch in ax.get_legend().get_patches()[1::2]:
-    # for patch in ax.get_legend().get_patches()[2:]:
-    #    patch.set_hatch("//")
-    patches = ax.get_legend().get_patches()
-    for hatch, patch in zip(hatches3, patches):
-        patch.set_hatch(hatch)
-
-    # annotate values with .2f
-    for container in ax.containers:
-        ax.bar_label(container, fmt="%.2f", padding=2, rotation=90, fontsize=5)
-
-    sns.despine(top=True)
-    plt.tight_layout()
-
-    if outname is None:
-        outname = f"memcached"
-        if vhost:
-            outname += "_vhost"
-        if mq:
-            outname += "_mq"
-        outname += ".pdf"
-
-    outdir = Path(outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
-    # Save as PDF
-    save_path_pdf = outdir / outname
-    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
-    print(f"PDF plot saved in {save_path_pdf}")
-    # Save as PNG
-    save_path_png = outdir / outname.replace(".pdf", ".png")
-    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
-    print(f"PNG plot saved in {save_path_png}")
-
-
-@task
-def plot_nginx(
-    ctx,
-    cvm="snp",
-    vhost=False,
-    mq=False,
-    outdir="plot",
-    outname=None,
-    size="medium",
-    result_dir=None,
-):
-    if result_dir is not None:
-        global BENCH_RESULT_DIR
-        BENCH_RESULT_DIR = Path(result_dir)
-
-    if cvm == "snp":
-        vm = "amd"
-        vm_label = "vm"
-        cvm_label = "snp"
+    if pkt is not None:
+        ax1.set_xticklabels([], fontsize=TICK_FONTSIZE)
+        ax1.set_xlabel("", fontsize=LABEL_FONTSIZE)
     else:
-        vm = "intel"
-        vm_label = "vm"
-        cvm_label = "td"
+        ax1.set_xlabel("Packet Size (byte)", fontsize=LABEL_FONTSIZE)
 
-    def get_name(name, vhost=False, p="", mq=mq):
-        n = f"{name}-disk-{size}{p}"
-        if vhost:
-            n += "-vhost"
-        if mq:
-            n += "-mq"
-        return n
-
-    dfs = []
-    dfs.append(parse_nginx_result(get_name(vm), vm_label))
-    dfs.append(parse_nginx_result(get_name(vm, vhost=True), f"vhost"))
-    dfs.append(parse_nginx_result(get_name(cvm), cvm_label))
-    dfs.append(parse_nginx_result(get_name(cvm, p="-haltpoll"), f"{cvm_label}-hpoll"))
-    dfs.append(parse_nginx_result(get_name(cvm, p="-poll"), f"{cvm_label}-poll"))
-    dfs.append(parse_nginx_result(get_name(cvm, vhost=True), f"{cvm_label}-vhost"))
-    dfs.append(
-        parse_nginx_result(
-            get_name(cvm, vhost=True, p="-haltpoll"), f"{cvm_label}-vhost-hpoll"
-        )
+    ax1.set_ylabel("Throughput (Gbps)", fontsize=LABEL_FONTSIZE)
+    ax1.set_title(
+        "(a) Iperf (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=5
     )
-    dfs.append(
-        parse_nginx_result(
-            get_name(cvm, vhost=True, p="-poll"), f"{cvm_label}-vhost-poll"
-        )
-    )
-    ## merge df using name as key
-    df = pd.concat(dfs)
-    print(df)
+    ax1.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1)
+    ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
+    ax1.get_legend().remove()  # Remove individual legend
 
-    fig, ax = plt.subplots(figsize=(figwidth_half, 2.0))
+    # Add annotations for iperf
+    for container in ax1.containers:
+        ax1.bar_label(
+            container, fmt="%.2f", rotation=90, padding=2, fontsize=ANNOTATION_FONTSIZE
+        )
+
+    # Redis subplot (right)
     sns.barplot(
         x="workload",
         y="throughput",
         hue="name",
-        data=df,
-        ax=ax,
-        palette=palette3,
+        data=redis_df,
+        ax=ax2,
+        palette=palette,
         edgecolor="black",
-        err_kws={"linewidth": 1},
+        err_kws={"linewidth": 0.6},
+        linewidth=0.6,
     )
-    ax.set_xlabel("")
-    ax.set_ylabel("Throughput [M req/s]")
-    ax.set_title("Higher is better ↑", fontsize=FONTSIZE, color="navy")
 
-    # remove legend title
-    ax.get_legend().set_title("")
+    ax2.set_xlabel("Workload", fontsize=LABEL_FONTSIZE)
+    ax2.set_ylabel("Throughput [M req/s]", fontsize=LABEL_FONTSIZE)
+    ax2.set_title(
+        "(b) Redis (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=5
+    )
+    ax2.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1)
+    ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
+    ax2.get_legend().remove()  # Remove individual legend
 
-    # set legend ncol
-    ax.legend(loc="lower center", ncol=2, fontsize=5)
+    # Add annotations for redis
+    for container in ax2.containers:
+        ax2.bar_label(
+            container, fmt="%.2f", fontsize=ANNOTATION_FONTSIZE, rotation=90, padding=2
+        )
 
-    # set hatch
-    bars = ax.patches
-    hs = []
-    num_x = 2
-    for hatch in hatches3:
-        hs.extend([hatch] * num_x)
-    num_legend = len(bars) - len(hs)
-    hs.extend([""] * num_legend)
-    for bar, hatch in zip(bars, hs):
-        bar.set_hatch(hatch)
+    # Create unified legend
+    handles, labels = ax1.get_legend_handles_labels()
+    if handles:
+        fig.legend(
+            handles,
+            labels,
+            loc="upper center",
+            ncol=min(len(labels), 4),  # Limit columns to prevent overcrowding
+            bbox_to_anchor=(0.52, 1.19),
+            frameon=True,
+            fontsize=LEGEND_FONTSIZE,
+            borderaxespad=0.0,
+            columnspacing=0.5,
+            labelspacing=0.4,
+            borderpad=0.2,
+            handletextpad=0.3,
+            handlelength=1.2,
+        )
 
-    # set hatch for the legend
-    patches = ax.get_legend().get_patches()
-    for hatch, patch in zip(hatches3, patches):
-        patch.set_hatch(hatch)
+    # Remove top spines
+    sns.despine(top=True, ax=ax1)
+    sns.despine(top=True, ax=ax2)
 
-    # annotate values with .2f
-    for container in ax.containers:
-        ax.bar_label(container, fmt="%.0f", rotation=90, fontsize=5)
-
-    sns.despine(top=True)
+    # Layout adjustments
     plt.tight_layout()
 
+    # Generate output filename
     if outname is None:
-        outname = f"nginx"
+        outname = f"network_combined_{mode}"
         if vhost:
             outname += "_vhost"
         if mq:
             outname += "_mq"
+        if pkt is not None:
+            outname += f"_{pkt}"
+        outname += f"{pvm}"
         outname += ".pdf"
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
+
     # Save as PDF
     save_path_pdf = outdir / outname
     plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
-    print(f"PDF plot saved in {save_path_pdf}")
+    print(f"Combined PDF plot saved in {save_path_pdf}")
+
     # Save as PNG
     save_path_png = outdir / outname.replace(".pdf", ".png")
     plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
-    print(f"PNG plot saved in {save_path_png}")
+    print(f"Combined PNG plot saved in {save_path_png}")
+
+    plt.clf()
