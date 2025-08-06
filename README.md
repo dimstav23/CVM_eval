@@ -14,3 +14,15 @@ See [./docs/development.md](./docs/development.md)
 
 ## License
 - MIT (unless explicitly noted, e.g., some kernel modules have different license described in the file)
+
+## Updated tracer notes
+For the GDPR analysis project:
+Run the [`tracer`](./experiment/tracer.sh):
+```
+cd experiment
+bash tracer.sh
+```
+This script applies the [`tracer patch`](./perf_trace.patch) (if not already applied) and runs the respective experiments specified in the script.
+It stores its results in the [`trace-result`] directory.
+
+To provide meaningful results out of these overly complicated results, you can use the [`plot_trace_metrics.sh`](./plot_trace_metrics.sh) script that analyses the results (CPU, memory, I/O, interrupts) and produces both `png`s and interactive `html` plots that are placed in the (created) [`trace/plotting_scripts/plots`] directory.
