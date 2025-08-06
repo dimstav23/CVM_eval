@@ -160,16 +160,38 @@ do
     do
         for action in memtier
         do
-            just trace ${type_}_redis 15 &
+            just trace ${type_}_memtier_redis 30 &
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm"
             sleep 5
-            just trace ${type_}_vhost_redis 15 &
+            just trace ${type_}_vhost_memtier_redis 30 &
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm" --virtio-nic-vhost
             sleep 5
-            just trace ${type_}_mq_redis 15 &
+            just trace ${type_}_mq_memtier_redis 30 &
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-mtap="mtap_cvm" --virtio-nic-mq
             sleep 5
-            just trace ${type_}_vhost_mq_redis 15 &
+            just trace ${type_}_vhost_mq_memtier_redis 30 &
+            inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-mtap="mtap_cvm" --virtio-nic-vhost --virtio-nic-mq
+            sleep 5
+        done
+    done
+done
+
+for size in medium
+do
+    for type_ in "${VM[@]}"
+    do
+        for action in memtier-memcached
+        do
+            just trace ${type_}_memcached 30 &
+            inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm"
+            sleep 5
+            just trace ${type_}_vhost_memcached 30 &
+            inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm" --virtio-nic-vhost
+            sleep 5
+            just trace ${type_}_mq_memcached 30 &
+            inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-mtap="mtap_cvm" --virtio-nic-mq
+            sleep 5
+            just trace ${type_}_vhost_mq_memcached 30 &
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-mtap="mtap_cvm" --virtio-nic-vhost --virtio-nic-mq
             sleep 5
         done
@@ -213,16 +235,43 @@ do
             do
                 SWIOTLB_OPTION="${SWIOTLB_OPTIONS[$i]}"
                 SWIOTLB_OPTION_TAG="${SWIOTLB_OPTIONS_TAGS[$i]}"
-                just trace ${type_}_${SWIOTLB_OPTION_TAG}_redis 15 &
+                just trace ${type_}_${SWIOTLB_OPTION_TAG}_redis 30 &
                 inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm" $SWIOTLB_OPTION
                 sleep 5
-                just trace ${type_}_vhost_${SWIOTLB_OPTION_TAG}_redis 15 &
+                just trace ${type_}_vhost_${SWIOTLB_OPTION_TAG}_redis 30 &
                 inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm" --virtio-nic-vhost $SWIOTLB_OPTION
                 sleep 5
-                just trace ${type_}_mq_${SWIOTLB_OPTION_TAG}_redis 15 &
+                just trace ${type_}_mq_${SWIOTLB_OPTION_TAG}_redis 30 &
                 inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-mtap="mtap_cvm" --virtio-nic-mq $SWIOTLB_OPTION
                 sleep 5
-                just trace ${type_}_vhost_mq_${SWIOTLB_OPTION_TAG}_redis 15 &
+                just trace ${type_}_vhost_mq_${SWIOTLB_OPTION_TAG}_redis 30 &
+                inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-mtap="mtap_cvm" --virtio-nic-vhost --virtio-nic-mq $SWIOTLB_OPTION
+                sleep 5
+            done
+        done
+    done
+done
+
+for size in medium
+do
+    for type_ in "${VM[@]}"
+    do
+        for action in memtier-memcached
+        do
+            for i in "${!SWIOTLB_OPTIONS[@]}"
+            do
+                SWIOTLB_OPTION="${SWIOTLB_OPTIONS[$i]}"
+                SWIOTLB_OPTION_TAG="${SWIOTLB_OPTIONS_TAGS[$i]}"
+                just trace ${type_}_${SWIOTLB_OPTION_TAG}_memcached 30 &
+                inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm" $SWIOTLB_OPTION
+                sleep 5
+                just trace ${type_}_vhost_${SWIOTLB_OPTION_TAG}_memcached 30 &
+                inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm" --virtio-nic-vhost $SWIOTLB_OPTION
+                sleep 5
+                just trace ${type_}_mq_${SWIOTLB_OPTION_TAG}_memcached 30 &
+                inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-mtap="mtap_cvm" --virtio-nic-mq $SWIOTLB_OPTION
+                sleep 5
+                just trace ${type_}_vhost_mq_${SWIOTLB_OPTION_TAG}_memcached 30 &
                 inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-mtap="mtap_cvm" --virtio-nic-vhost --virtio-nic-mq $SWIOTLB_OPTION
                 sleep 5
             done
