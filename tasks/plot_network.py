@@ -161,23 +161,28 @@ def parse_memtier_result(
             server,
             False,
         )
-        if date_tls is None:
-            date_tls = sorted(
-                os.listdir(BENCH_RESULT_DIR / "memtier" / f"{server}-tls" / name)
-            )[-1]
-        df_tls = parse_memtier_result_sub(
-            BENCH_RESULT_DIR
-            / "memtier"
-            / f"{server}-tls"
-            / name
-            / date_tls
-            / "memtier.log",
-            f"{label}",
-            server,
-            True,
-        )
         dfs.append(df)
-        dfs.append(df_tls)
+
+        if date_tls is None:
+            dir_path = BENCH_RESULT_DIR / "memtier" / f"{server}-tls" / name
+            date_tls = (
+                sorted(os.listdir(dir_path))[-1]
+                if dir_path.exists() and os.listdir(dir_path)
+                else None
+            )
+        if date_tls is not None:
+            df_tls = parse_memtier_result_sub(
+                BENCH_RESULT_DIR
+                / "memtier"
+                / f"{server}-tls"
+                / name
+                / date_tls
+                / "memtier.log",
+                f"{label}",
+                server,
+                True,
+            )
+            dfs.append(df_tls)
 
     df = pd.concat(dfs)
 
