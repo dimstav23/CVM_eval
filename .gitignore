@@ -27,3 +27,6 @@ guest-tools
 *.mod.o
 Module.symvers
 modules.order
+
+/plot/
+/gdpr_setup/
