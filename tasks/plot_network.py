@@ -466,6 +466,126 @@ def plot_redis(
 
 
 @task
+def plot_memcached(
+    ctx,
+    cvm="snp",
+    vhost=False,
+    mq=False,
+    outdir="plot",
+    outname=None,
+    size="medium",
+    result_dir=None,
+):
+    if result_dir is not None:
+        global BENCH_RESULT_DIR
+        BENCH_RESULT_DIR = Path(result_dir)
+    if cvm == "snp":
+        vm = "amd"
+        vm_label = "VM"
+        cvm_label = "SNP"
+    else:
+        vm = "intel"
+        vm_label = "vm"
+        cvm_label = "td"
+
+    def get_name(name, vhost=False, p="", mq=mq):
+        n = f"{name}-disk-{size}{p}"
+        if vhost:
+            n += "-vhost"
+        if mq:
+            n += "-mq"
+        return n
+
+    dfs = []
+    dfs.append(parse_memtier_result(get_name(vm), vm_label, "memcached"))
+    dfs.append(
+        parse_memtier_result(get_name(vm, vhost=True), f"{vm_label}-vhost", "memcached")
+    )
+    dfs.append(parse_memtier_result(get_name(cvm), cvm_label, "memcached"))
+    dfs.append(
+        parse_memtier_result(
+            get_name(cvm, p="-haltpoll"), f"{cvm_label}-hpoll", "memcached"
+        )
+    )
+    dfs.append(
+        parse_memtier_result(get_name(cvm, p="-poll"), f"{cvm_label}-poll", "memcached")
+    )
+    dfs.append(
+        parse_memtier_result(
+            get_name(cvm, vhost=True), f"{cvm_label}-vhost", "memcached"
+        )
+    )
+    dfs.append(
+        parse_memtier_result(
+            get_name(cvm, vhost=True, p="-haltpoll"),
+            f"{cvm_label}-hpoll-vhost",
+            "memcached",
+        )
+    )
+    dfs.append(
+        parse_memtier_result(
+            get_name(cvm, vhost=True, p="-poll"), f"{cvm_label}-poll-vhost", "memcached"
+        )
+    )
+    df = pd.concat(dfs)
+    print(df)
+
+    fig, ax = plt.subplots(figsize=(figwidth_half, 2.0))
+    sns.barplot(
+        x="workload",
+        y="throughput",
+        hue="name",
+        data=df,
+        ax=ax,
+        palette=palette,
+        edgecolor="black",
+        err_kws={"linewidth": 0.6},
+    )
+    ax.set_xlabel("", fontsize=LABEL_FONTSIZE)
+    ax.set_ylabel("Throughput [M req/s]", fontsize=LABEL_FONTSIZE)
+    ax.set_title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
+    ax.tick_params(
+        axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1
+    )  # Remove x-axis tick bars
+    ax.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
+
+    # remove legend title
+    ax.get_legend().set_title("")
+
+    # set legend ncol
+    ax.legend(loc="center", ncol=2, fontsize=LEGEND_FONTSIZE)
+
+    # annotate values with .2f
+    for container in ax.containers:
+        ax.bar_label(
+            container, fmt="%.2f", fontsize=ANNOTATION_FONTSIZE, rotation=90, padding=2
+        )
+
+    sns.despine(top=True)
+    plt.tight_layout()
+
+    if outname is None:
+        outname = f"memcached"
+        if vhost:
+            outname += "_vhost"
+        if mq:
+            outname += "_mq"
+        outname += ".pdf"
+
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    # Save as PDF
+    save_path_pdf = outdir / outname
+    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
+    print(f"PDF plot saved in {save_path_pdf}")
+    # Save as PNG
+    save_path_png = outdir / outname.replace(".pdf", ".png")
+    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
+    print(f"PNG plot saved in {save_path_png}")
+    plt.clf()
+
+
+@task
 def plot_network(
     ctx,
     cvm="snp",

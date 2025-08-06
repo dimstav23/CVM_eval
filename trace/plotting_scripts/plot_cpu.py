@@ -379,6 +379,9 @@ def main():
         "--redis", action="store_true", help="Generate plots for Redis workload"
     )
     parser.add_argument(
+        "--memcached", action="store_true", help="Generate plots for memcached workload"
+    )
+    parser.add_argument(
         "--fio", action="store_true", help="Generate plots for FIO workload"
     )
     parser.add_argument(
@@ -393,9 +396,9 @@ def main():
     args = parser.parse_args()
 
     # Check if at least one workload type is specified
-    if not (args.redis or args.fio or args.network):
+    if not (args.redis or args.fio or args.network or args.memcached):
         print(
-            "Error: Please specify at least one workload type (--redis, --fio, or --network)"
+            "Error: Please specify at least one workload type (--redis, --fio, --memcached or --network)"
         )
         parser.print_help()
         return
@@ -412,6 +415,8 @@ def main():
         workload_types.append("fio")
     if args.network:
         workload_types.append("network")
+    if args.memcached:
+        workload_types.append("memcached")
 
     print("=" * 60)
     print("GENERATING BOTH STATIC AND INTERACTIVE CPU PLOTS")
