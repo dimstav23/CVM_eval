@@ -20,7 +20,7 @@ set -o pipefail
 inv storage.plot-fio --cvm $CVM --device nvme1n1 --outdir $OUT --result-dir $RESULTDIR/fio
 inv network.plot-network --cvm $CVM --mode tcp --outdir $OUT --result-dir $RESULTDIR/network
 inv network.plot-network --cvm $CVM --mode tcp --mq --outdir $OUT --result-dir $RESULTDIR/network
-inv network.plot-memcached --cvm $CVM --outdir $OUT --result-dir $RESULTDIR/network
+# inv network.plot-memcached --cvm $CVM --outdir $OUT --result-dir $RESULTDIR/network
 
 # inv network.plot-iperf --cvm $CVM --mode tcp --outdir $OUT --result-dir $RESULTDIR/network
 # inv network.plot-iperf --cvm $CVM --mode tcp --mq --outdir $OUT --result-dir $RESULTDIR/network

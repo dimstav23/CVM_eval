@@ -149,6 +149,8 @@
                 fio
                 cryptsetup
                 iperf # iperf3
+                memcached
+                redis
                 memtier-benchmark
                 wrk
               ] ++ [ inv-completion ]

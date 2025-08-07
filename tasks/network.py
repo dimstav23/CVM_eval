@@ -322,6 +322,7 @@ def run_iperf_baremetal(
     pin_start: int = 20,
     pin_end: Optional[int] = None,
     target_ip: str = "127.0.0.1",
+    **kwargs,
 ):
     """Run iperf benchmark on bare metal (client and server on same host)"""
     if udp:
@@ -343,8 +344,29 @@ def run_iperf_baremetal(
     outputdir_host = PROJECT_ROOT / outputdir
     outputdir_host.mkdir(parents=True, exist_ok=True)
 
+    # Get server CPU configuration from resource
+    resource = kwargs.get("config", {}).get("resource")
+    if resource:
+        server_total_cpus = resource.cpu
+        server_pin_base = resource.pin_base
+        # For FIO, use all available CPUs
+        server_cpu_range = (
+            f"{server_pin_base}-{server_pin_base + server_total_cpus - 1}"
+        )
+    else:
+        server_cpu_range = "8-15"  # default range
+
     # Start server in background
-    server_cmd = ["iperf3", "-s", "-p", f"{port}", "-D"]
+    server_cmd = [
+        "taskset",
+        "-c",
+        server_cpu_range,
+        "iperf3",
+        "-s",
+        "-p",
+        f"{port}",
+        "-D",
+    ]
     subprocess.run(server_cmd)
     time.sleep(1)
 
@@ -440,8 +462,23 @@ def run_memtier_baremetal(
     if pin_end is None:
         pin_end = pin_start + client_threads - 1
 
+    # Get server CPU configuration from resource
+    resource = kwargs.get("config", {}).get("resource")
+    if resource:
+        server_total_cpus = resource.cpu
+        server_pin_base = resource.pin_base
+        # For FIO, use all available CPUs
+        server_cpu_range = (
+            f"{server_pin_base}-{server_pin_base + server_total_cpus - 1}"
+        )
+    else:
+        server_cpu_range = "8-15"  # default range
+
     # Start server using justfile (adapted for bare metal)
     server_cmd = [
+        "taskset",
+        "-c",
+        server_cpu_range,
         "just",
         "-f",
         f"{PROJECT_ROOT}/benchmarks/network/justfile",

@@ -36,7 +36,7 @@ TICK_FONTSIZE = FONTSIZE - 1
 LEGEND_FONTSIZE = FONTSIZE
 ANNOTATION_FONTSIZE = FONTSIZE / 2 - 1
 
-palette = sns.color_palette("pastel", n_colors=5)
+palette = sns.color_palette("pastel", n_colors=15)
 hatches = ["", "o", "//", "x", ""]
 
 
@@ -768,6 +768,9 @@ def plot_fio(
         global BENCH_RESULT_DIR
         BENCH_RESULT_DIR = Path(result_dir)
 
+    bare_metal = "baremetal"
+    bare_metal_label = "native"
+
     pvm = ""
     pcvm = ""
     if cvm == "snp":
@@ -785,6 +788,7 @@ def plot_fio(
         pcvm += "-poll"
 
     dfs = []
+    dfs.append(read_result(f"{bare_metal}-{size}", bare_metal_label, jobfile))
     dfs.append(read_result(f"{vm}-disk-{size}{pvm}-{aio}", vm_label, jobfile))
     dfs.append(
         read_result(
@@ -838,6 +842,9 @@ def analyze_fio(
         global BENCH_RESULT_DIR
         BENCH_RESULT_DIR = Path(result_dir)
 
+    bare_metal = "baremetal"
+    bare_metal_label = "native"
+
     pvm = ""
     pcvm = ""
     if cvm == "snp":
@@ -854,17 +861,22 @@ def analyze_fio(
         pvm += "-poll"
         pcvm += "-poll"
 
+    bdf = read_result(f"{bare_metal}-{size}", bare_metal_label, jobfile, max_num=10)
     df = read_result(f"{vm}-disk-{size}-{pvm}-{aio}", vm_label, jobfile, max_num=10)
     cdf = read_result(f"{cvm}-disk-{size}-{pcvm}-{aio}", cvm_label, jobfile, max_num=10)
 
+    print(bdf[(bdf["jobname"] == "bw read")]["read_bw_mean"])
     print(df[(df["jobname"] == "bw read")]["read_bw_mean"])
     print(cdf[(cdf["jobname"] == "bw read")]["read_bw_mean"])
 
+    print(bdf[(bdf["jobname"] == "bw write")]["write_bw_mean"])
     print(df[(df["jobname"] == "bw write")]["write_bw_mean"])
     print(cdf[(cdf["jobname"] == "bw write")]["write_bw_mean"])
 
+    print(bdf[(bdf["jobname"] == "iops randread")]["read_iops_mean"])
     print(df[(df["jobname"] == "iops randread")]["read_iops_mean"])
     print(cdf[(cdf["jobname"] == "iops randread")]["read_iops_mean"])
 
+    print(bdf[(bdf["jobname"] == "iops randwrite")]["write_iops_mean"])
     print(df[(df["jobname"] == "iops randwrite")]["write_iops_mean"])
     print(cdf[(cdf["jobname"] == "iops randwrite")]["write_iops_mean"])

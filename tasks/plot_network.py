@@ -33,7 +33,7 @@ TICK_FONTSIZE = FONTSIZE - 1
 LEGEND_FONTSIZE = FONTSIZE
 ANNOTATION_FONTSIZE = FONTSIZE / 2 - 1
 
-palette = sns.color_palette("pastel", n_colors=10)
+palette = sns.color_palette("pastel", n_colors=15)
 hatches = ["", "o", "//", "x", ""]
 
 BENCH_RESULT_DIR = Path("./bench-result/network")
@@ -208,6 +208,10 @@ def plot_iperf(
     if result_dir is not None:
         global BENCH_RESULT_DIR
         BENCH_RESULT_DIR = Path(result_dir)
+
+    bare_metal = "baremetal"
+    bare_metal_label = "native"
+
     pvm = ""
     pcvm = ""
     if cvm == "snp":
@@ -235,6 +239,9 @@ def plot_iperf(
         return n
 
     dfs = []
+    dfs.append(
+        parse_iperf_result(f"{bare_metal}-{size}", bare_metal_label, mode, pkt=pkt)
+    )
     dfs.append(parse_iperf_result(get_name(vm, pvm), vm_label, mode, pkt=pkt))
     dfs.append(
         parse_iperf_result(
@@ -366,6 +373,10 @@ def plot_redis(
     if result_dir is not None:
         global BENCH_RESULT_DIR
         BENCH_RESULT_DIR = Path(result_dir)
+
+    bare_metal = "baremetal"
+    bare_metal_label = "native"
+
     if cvm == "snp":
         vm = "amd"
         vm_label = "VM"
@@ -384,6 +395,7 @@ def plot_redis(
         return n
 
     dfs = []
+    dfs.append(parse_memtier_result(f"{bare_metal}-{size}", bare_metal_label, "redis"))
     dfs.append(parse_memtier_result(get_name(vm), vm_label, "redis"))
     dfs.append(
         parse_memtier_result(get_name(vm, vhost=True), f"{vm_label}-vhost", "redis")
@@ -484,6 +496,10 @@ def plot_memcached(
     if result_dir is not None:
         global BENCH_RESULT_DIR
         BENCH_RESULT_DIR = Path(result_dir)
+
+    bare_metal = "baremetal"
+    bare_metal_label = "native"
+
     if cvm == "snp":
         vm = "amd"
         vm_label = "VM"
@@ -502,6 +518,9 @@ def plot_memcached(
         return n
 
     dfs = []
+    dfs.append(
+        parse_memtier_result(f"{bare_metal}-{size}", bare_metal_label, "memcached")
+    )
     dfs.append(parse_memtier_result(get_name(vm), vm_label, "memcached"))
     dfs.append(
         parse_memtier_result(get_name(vm, vhost=True), f"{vm_label}-vhost", "memcached")
@@ -610,6 +629,9 @@ def plot_network(
         global BENCH_RESULT_DIR
         BENCH_RESULT_DIR = Path(result_dir)
 
+    bare_metal = "baremetal"
+    bare_metal_label = "native"
+
     pvm = ""
     pcvm = ""
     if cvm == "snp":
@@ -638,6 +660,9 @@ def plot_network(
 
     # Parse iperf data
     iperf_dfs = []
+    iperf_dfs.append(
+        parse_iperf_result(f"{bare_metal}-{size}", bare_metal_label, mode, pkt=pkt)
+    )
     iperf_dfs.append(parse_iperf_result(get_name(vm, pvm), vm_label, mode, pkt=pkt))
     iperf_dfs.append(
         parse_iperf_result(
@@ -691,6 +716,9 @@ def plot_network(
 
     # Parse redis data
     redis_dfs = []
+    redis_dfs.append(
+        parse_memtier_result(f"{bare_metal}-{size}", bare_metal_label, "redis")
+    )
     redis_dfs.append(parse_memtier_result(get_name(vm, ""), vm_label, "redis"))
     redis_dfs.append(
         parse_memtier_result(

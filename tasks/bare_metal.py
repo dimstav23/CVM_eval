@@ -39,26 +39,29 @@ def run_ping_baremetal(name: str, **kargs: Any):
 
 def run_iperf_baremetal(name: str, udp: bool = False, **kargs: Any):
     """Run iperf benchmark on bare metal"""
+    cfg = kargs["config"]  # full config dict
     from network import run_iperf_baremetal
 
-    run_iperf_baremetal(name, udp=udp)
+    run_iperf_baremetal(name, udp=udp, config=cfg)
 
 
 def run_memtier_baremetal(name: str, server: str = "redis", **kargs: Any):
     """Run memtier benchmark on bare metal"""
+    cfg = kargs["config"]  # full config dict
     tls: bool = kargs["config"].get("tls", False)
     from network import run_memtier_baremetal
 
-    run_memtier_baremetal(name, server=server, tls=tls)
+    run_memtier_baremetal(name, server=server, tls=tls, config=cfg)
 
 
 def run_fio_baremetal(name: str, **kargs: Any):
     """Run fio benchmark on bare metal"""
+    cfg = kargs["config"]  # full config dict
     fio_job = kargs["config"]["fio_job"]
     filename = kargs["config"].get("fio_filename", "/tmp/testfile")
     from storage import run_fio_baremetal
 
-    run_fio_baremetal(name, fio_job, filename)
+    run_fio_baremetal(name, job=fio_job, filename=filename, config=cfg)
 
 
 def do_action(action: str, **kwargs: Any) -> None:
