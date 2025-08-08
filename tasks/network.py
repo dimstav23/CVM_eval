@@ -137,6 +137,13 @@ def run_memtier(
 
     if server == "redis":
         proto = "redis"
+        prepare_redis_cmd = [
+            "rm",
+            "-rf",
+            "/root/dump.rdb",
+            "/share/benchmarks/network/dump.rdb",
+        ]
+        vm.ssh_cmd(prepare_redis_cmd)
     elif server == "memcached":
         proto = "memcache_binary"
     else:
@@ -438,6 +445,12 @@ def run_memtier_baremetal(
 
     if server == "redis":
         proto = "redis"
+        prepare_redis_cmd = [
+            "rm",
+            "-rf",
+            str(PROJECT_ROOT / "benchmarks/network/dump.rdb"),
+        ]
+        subprocess.run(prepare_redis_cmd, check=False)
     elif server == "memcached":
         proto = "memcache_binary"
     else:
