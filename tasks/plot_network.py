@@ -210,7 +210,7 @@ def plot_iperf(
         BENCH_RESULT_DIR = Path(result_dir)
 
     bare_metal = "baremetal"
-    bare_metal_label = "native"
+    bare_metal_label = "Native"
 
     pvm = ""
     pcvm = ""
@@ -375,7 +375,7 @@ def plot_redis(
         BENCH_RESULT_DIR = Path(result_dir)
 
     bare_metal = "baremetal"
-    bare_metal_label = "native"
+    bare_metal_label = "Native"
 
     if cvm == "snp":
         vm = "amd"
@@ -498,7 +498,7 @@ def plot_memcached(
         BENCH_RESULT_DIR = Path(result_dir)
 
     bare_metal = "baremetal"
-    bare_metal_label = "native"
+    bare_metal_label = "Native"
 
     if cvm == "snp":
         vm = "amd"
@@ -630,7 +630,7 @@ def plot_network(
         BENCH_RESULT_DIR = Path(result_dir)
 
     bare_metal = "baremetal"
-    bare_metal_label = "native"
+    bare_metal_label = "Native"
 
     pvm = ""
     pcvm = ""
@@ -664,54 +664,54 @@ def plot_network(
         parse_iperf_result(f"{bare_metal}-{size}", bare_metal_label, mode, pkt=pkt)
     )
     iperf_dfs.append(parse_iperf_result(get_name(vm, pvm), vm_label, mode, pkt=pkt))
-    iperf_dfs.append(
-        parse_iperf_result(
-            get_name(vm, pvm, vhost=False, swiotlb=True),
-            f"{vm_label}-swiotlb",
-            mode,
-            pkt=pkt,
-        )
-    )
+    # iperf_dfs.append(
+    #     parse_iperf_result(
+    #         get_name(vm, pvm, vhost=False, swiotlb=True),
+    #         f"{vm_label}-swiotlb",
+    #         mode,
+    #         pkt=pkt,
+    #     )
+    # )
     iperf_dfs.append(
         parse_iperf_result(
             get_name(vm, pvm, vhost=True), f"{vm_label}-vhost", mode, pkt=pkt
         )
     )
-    iperf_dfs.append(
-        parse_iperf_result(
-            get_name(vm, pvm, vhost=True, swiotlb=True),
-            f"{vm_label}-vhost-swiotlb",
-            mode,
-            pkt=pkt,
-        )
-    )
+    # iperf_dfs.append(
+    #     parse_iperf_result(
+    #         get_name(vm, pvm, vhost=True, swiotlb=True),
+    #         f"{vm_label}-vhost-swiotlb",
+    #         mode,
+    #         pkt=pkt,
+    #     )
+    # )
     iperf_dfs.append(parse_iperf_result(get_name(cvm, pcvm), cvm_label, mode, pkt=pkt))
-    iperf_dfs.append(
-        parse_iperf_result(
-            get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", mode, pkt=pkt
-        )
-    )
-    iperf_dfs.append(
-        parse_iperf_result(get_name(cvm, "-poll"), f"{cvm_label}-poll", mode, pkt=pkt)
-    )
+    # iperf_dfs.append(
+    #     parse_iperf_result(
+    #         get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", mode, pkt=pkt
+    #     )
+    # )
+    # iperf_dfs.append(
+    #     parse_iperf_result(get_name(cvm, "-poll"), f"{cvm_label}-poll", mode, pkt=pkt)
+    # )
     iperf_dfs.append(
         parse_iperf_result(
             get_name(cvm, pcvm, vhost=True), f"{cvm_label}-vhost", mode, pkt=pkt
         )
     )
-    iperf_dfs.append(
-        parse_iperf_result(
-            get_name(cvm, "-haltpoll-vhost"),
-            f"{cvm_label}-vhost-hpoll",
-            mode,
-            pkt=pkt,
-        )
-    )
-    iperf_dfs.append(
-        parse_iperf_result(
-            get_name(cvm, "-poll-vhost"), f"{cvm_label}-vhost-poll", mode, pkt=pkt
-        )
-    )
+    # iperf_dfs.append(
+    #     parse_iperf_result(
+    #         get_name(cvm, "-haltpoll-vhost"),
+    #         f"{cvm_label}-vhost-hpoll",
+    #         mode,
+    #         pkt=pkt,
+    #     )
+    # )
+    # iperf_dfs.append(
+    #     parse_iperf_result(
+    #         get_name(cvm, "-poll-vhost"), f"{cvm_label}-vhost-poll", mode, pkt=pkt
+    #     )
+    # )
     iperf_df = pd.concat(iperf_dfs)
 
     # Parse redis data
@@ -720,45 +720,45 @@ def plot_network(
         parse_memtier_result(f"{bare_metal}-{size}", bare_metal_label, "redis")
     )
     redis_dfs.append(parse_memtier_result(get_name(vm, ""), vm_label, "redis"))
-    redis_dfs.append(
-        parse_memtier_result(
-            get_name(vm, pvm, vhost=False, swiotlb=True), f"{vm_label}-swiotlb", "redis"
-        )
-    )
+    # redis_dfs.append(
+    #     parse_memtier_result(
+    #         get_name(vm, pvm, vhost=False, swiotlb=True), f"{vm_label}-swiotlb", "redis"
+    #     )
+    # )
     redis_dfs.append(
         parse_memtier_result(get_name(vm, "", vhost=True), f"{vm_label}-vhost", "redis")
     )
-    redis_dfs.append(
-        parse_memtier_result(
-            get_name(vm, pvm, vhost=True, swiotlb=True),
-            f"{vm_label}-vhost-swiotlb",
-            "redis",
-        )
-    )
+    # redis_dfs.append(
+    #     parse_memtier_result(
+    #         get_name(vm, pvm, vhost=True, swiotlb=True),
+    #         f"{vm_label}-vhost-swiotlb",
+    #         "redis",
+    #     )
+    # )
     redis_dfs.append(parse_memtier_result(get_name(cvm, ""), cvm_label, "redis"))
-    redis_dfs.append(
-        parse_memtier_result(get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", "redis")
-    )
-    redis_dfs.append(
-        parse_memtier_result(get_name(cvm, "-poll"), f"{cvm_label}-poll", "redis")
-    )
+    # redis_dfs.append(
+    #     parse_memtier_result(get_name(cvm, "-haltpoll"), f"{cvm_label}-hpoll", "redis")
+    # )
+    # redis_dfs.append(
+    #     parse_memtier_result(get_name(cvm, "-poll"), f"{cvm_label}-poll", "redis")
+    # )
     redis_dfs.append(
         parse_memtier_result(
             get_name(cvm, "", vhost=True), f"{cvm_label}-vhost", "redis"
         )
     )
-    redis_dfs.append(
-        parse_memtier_result(
-            get_name(cvm, "-haltpoll", vhost=True),
-            f"{cvm_label}-vhost-hpoll",
-            "redis",
-        )
-    )
-    redis_dfs.append(
-        parse_memtier_result(
-            get_name(cvm, "-poll", vhost=True), f"{cvm_label}-vhost-poll", "redis"
-        )
-    )
+    # redis_dfs.append(
+    #     parse_memtier_result(
+    #         get_name(cvm, "-haltpoll", vhost=True),
+    #         f"{cvm_label}-vhost-hpoll",
+    #         "redis",
+    #     )
+    # )
+    # redis_dfs.append(
+    #     parse_memtier_result(
+    #         get_name(cvm, "-poll", vhost=True), f"{cvm_label}-vhost-poll", "redis"
+    #     )
+    # )
     redis_df = pd.concat(redis_dfs)
 
     print("Iperf data:")
@@ -837,8 +837,8 @@ def plot_network(
             handles,
             labels,
             loc="upper center",
-            ncol=min(len(labels), 4),  # Limit columns to prevent overcrowding
-            bbox_to_anchor=(0.52, 1.19),
+            ncol=min(len(labels), 5),  # Limit columns to prevent overcrowding
+            bbox_to_anchor=(0.52, 1.05),
             frameon=True,
             fontsize=LEGEND_FONTSIZE,
             borderaxespad=0.0,

@@ -769,7 +769,7 @@ def plot_fio(
         BENCH_RESULT_DIR = Path(result_dir)
 
     bare_metal = "baremetal"
-    bare_metal_label = "native"
+    bare_metal_label = "Native"
 
     pvm = ""
     pcvm = ""
@@ -790,18 +790,18 @@ def plot_fio(
     dfs = []
     dfs.append(read_result(f"{bare_metal}-{size}", bare_metal_label, jobfile))
     dfs.append(read_result(f"{vm}-disk-{size}{pvm}-{aio}", vm_label, jobfile))
-    dfs.append(
-        read_result(
-            f"{vm}-disk-{size}-{aio}{pvm}-swiotlb", f"{vm_label}-swiotlb", jobfile
-        )
-    )
+    # dfs.append(
+    #     read_result(
+    #         f"{vm}-disk-{size}-{aio}{pvm}-swiotlb", f"{vm_label}-swiotlb", jobfile
+    #     )
+    # )
     dfs.append(read_result(f"{cvm}-disk-{size}{pcvm}-{aio}", cvm_label, jobfile))
     dfs.append(
         read_result(f"{cvm}-disk-{size}-poll-{aio}", f"{cvm_label}-poll", jobfile)
     )
-    dfs.append(
-        read_result(f"{cvm}-disk-{size}-haltpoll-{aio}", f"{cvm_label}-hpoll", jobfile)
-    )
+    # dfs.append(
+    #     read_result(f"{cvm}-disk-{size}-haltpoll-{aio}", f"{cvm_label}-hpoll", jobfile)
+    # )
 
     df = pd.concat(dfs)
     print(df)
@@ -843,7 +843,7 @@ def analyze_fio(
         BENCH_RESULT_DIR = Path(result_dir)
 
     bare_metal = "baremetal"
-    bare_metal_label = "native"
+    bare_metal_label = "Native"
 
     pvm = ""
     pcvm = ""
