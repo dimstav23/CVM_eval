@@ -10,7 +10,8 @@ DISKS=${DISKS:-nvme1n1}
 # Network
 for size in medium
 do
-    for action in ping iperf iperf-udp
+    # for action in ping iperf iperf-udp
+    for action in iperf
     do
         inv bare-metal.start --size ${size} --action="run-${action}"
     done

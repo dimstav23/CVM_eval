@@ -6,10 +6,13 @@ VM=(amd snp)
 DISKS=${DISKS:-nvme1n1}
 
 # Options for SWIOTLB
-SWIOTLB_OPTIONS=(
-  '--virtio-iommu --extra-cmdline "swiotlb=524288,force"'
+# SWIOTLB_OPTIONS=(
+#   '--virtio-iommu --extra-cmdline "swiotlb=524288,force"'
+#   '--extra-cmdline "idle=poll" --name-extra -poll'
+#   '--extra-cmdline "cpuidle_haltpoll.force=Y" --name-extra -haltpoll'
+# )
+SWIOTLB_OPTIONS=(\
   '--extra-cmdline "idle=poll" --name-extra -poll'
-  '--extra-cmdline "cpuidle_haltpoll.force=Y" --name-extra -haltpoll'
 )
 
 for size in medium
@@ -33,7 +36,8 @@ for size in medium
 do
     for type_ in "${VM[@]}"
     do
-        for action in ping iperf iperf-udp
+        # for action in ping iperf iperf-udp
+        for action in iperf
         do
             for SWIOTLB_OPTION in "${SWIOTLB_OPTIONS[@]}"
             do

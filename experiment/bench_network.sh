@@ -11,7 +11,8 @@ for size in medium
 do
     for type_ in "${VM[@]}"
     do
-        for action in ping iperf iperf-udp
+        # for action in ping iperf iperf-udp
+        for action in iperf
         do
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm"
             inv vm.start --type ${type_} --size ${size} --virtio-nic --action="run-${action}" --virtio-nic-tap="tap_cvm"  --virtio-nic-vhost

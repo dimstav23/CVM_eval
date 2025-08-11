@@ -790,7 +790,7 @@ def plot_network(
 
     ax1.set_ylabel("Throughput (Gbps)", fontsize=LABEL_FONTSIZE)
     ax1.set_title(
-        "(a) Iperf (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=5
+        "(a) Iperf (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=6
     )
     ax1.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1)
     ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
@@ -818,7 +818,7 @@ def plot_network(
     ax2.set_xlabel("Workload", fontsize=LABEL_FONTSIZE)
     ax2.set_ylabel("Throughput [M req/s]", fontsize=LABEL_FONTSIZE)
     ax2.set_title(
-        "(b) Redis (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=5
+        "(b) Redis (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=6
     )
     ax2.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1)
     ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
@@ -838,15 +838,10 @@ def plot_network(
             labels,
             loc="upper center",
             ncol=min(len(labels), 5),  # Limit columns to prevent overcrowding
-            bbox_to_anchor=(0.52, 1.05),
+            bbox_to_anchor=(0.52, 1.1),
             frameon=True,
             fontsize=LEGEND_FONTSIZE,
-            borderaxespad=0.0,
-            columnspacing=0.5,
-            labelspacing=0.4,
-            borderpad=0.2,
-            handletextpad=0.3,
-            handlelength=1.2,
+            columnspacing=1.5,
         )
 
     # Remove top spines
