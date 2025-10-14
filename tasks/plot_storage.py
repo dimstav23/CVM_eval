@@ -34,7 +34,7 @@ TITLE_FONTSIZE = FONTSIZE
 LABEL_FONTSIZE = FONTSIZE
 TICK_FONTSIZE = FONTSIZE - 1
 LEGEND_FONTSIZE = FONTSIZE
-ANNOTATION_FONTSIZE = FONTSIZE / 2 - 1
+ANNOTATION_FONTSIZE = FONTSIZE / 2
 
 palette = sns.color_palette("pastel", n_colors=15)
 hatches = ["", "o", "//", "x", ""]
@@ -217,6 +217,8 @@ def plot_bw(df, outdir, outname, legend=True):
         ["Seq Read", "Seq Write", "Rand Read", "Rand Write"], fontsize=TICK_FONTSIZE
     )
 
+    ax.grid(True, alpha=0.3, axis="y")
+
     sns.move_legend(
         ax,
         "lower center",
@@ -231,7 +233,7 @@ def plot_bw(df, outdir, outname, legend=True):
     plt.ylabel("Bandwidth [GiB/s]")
     plt.xlabel("")
     plt.title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
-    sns.despine(top=True)
+    # sns.despine(top=True)
     plt.tight_layout()
 
     # Save as PDF
@@ -360,6 +362,7 @@ def plot_iops(df, outdir, outname="", legend=True):
                 job_labels.append("Rand Write")
 
     ax.set_xticklabels(job_labels, fontsize=TICK_FONTSIZE)
+    ax.grid(True, alpha=0.3, axis="y")
 
     sns.move_legend(
         ax,
@@ -372,7 +375,7 @@ def plot_iops(df, outdir, outname="", legend=True):
     if not legend:
         plt.legend([], [], frameon=False)
 
-    plt.ylabel("Throughput [K IOPS]")
+    plt.ylabel("Throughput (K IOPS)")
     plt.xlabel("")
     plt.title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
     sns.despine(top=True)
@@ -478,6 +481,8 @@ def plot_latency(df, outdir, outname, legend=True):
         ["Seq Read", "Seq Write", "Rand Read", "Rand Write"], fontsize=TICK_FONTSIZE
     )
 
+    ax.grid(True, alpha=0.3, axis="y")
+
     sns.move_legend(
         ax,
         "upper center",
@@ -489,10 +494,10 @@ def plot_latency(df, outdir, outname, legend=True):
     if not legend:
         plt.legend([], [], frameon=False)
 
-    plt.ylabel("4KB Latency [us]")
+    plt.ylabel("4KB Latency (us)")
     plt.xlabel("")
     plt.title("Lower is better ↓", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
-    sns.despine(top=True)
+    # sns.despine(top=True)
     plt.tight_layout()
 
     # Save as PDF
@@ -508,7 +513,7 @@ def plot_latency(df, outdir, outname, legend=True):
 
 def plot_throughput_latency_combined(df, outdir, outname, legend=True):
     """Create side-by-side subplots for throughput (IOPS) and latency"""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.5))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.1))
 
     # Throughput subplot (left)
     iops_jobs = [
@@ -588,11 +593,14 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
         )
         ax1.tick_params(axis="x", length=3, pad=0)  # Remove x-axis tick bars
         ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
-        ax1.set_ylabel("Throughput [K IOPS]", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax1.set_ylabel("Throughput (K IOPS)", fontsize=LABEL_FONTSIZE, labelpad=2)
         ax1.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=2)
         ax1.set_title(
             "Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3
         )
+        ax1.grid(True, alpha=0.3, axis="y")
+        ylim1 = ax1.get_ylim()
+        ax1.set_ylim(ylim1[0], ylim1[1] * 1.15)  # Add 15% headroom at top
 
         # Put numbers on top of bars for throughput
         for i, p in enumerate(ax1.patches):
@@ -688,9 +696,12 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
         )
         ax2.tick_params(axis="x", length=3, pad=0)  # Remove x-axis tick bars
         ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
-        ax2.set_ylabel("4KB Latency [us]", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax2.set_ylabel("4KB Latency (us)", fontsize=LABEL_FONTSIZE, labelpad=2)
         ax2.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=2)
         ax2.set_title("Lower is better ↓", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
+        ax2.grid(True, alpha=0.3, axis="y")
+        ylim2 = ax2.get_ylim()
+        ax2.set_ylim(ylim2[0], ylim2[1] * 1.15)  # Add 15% headroom at top
 
         # Put numbers on top of bars for latency
         for i, p in enumerate(ax2.patches):
@@ -726,15 +737,15 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
                 labels,
                 loc="upper center",
                 ncol=n,
-                bbox_to_anchor=(0.5, 1.1),
+                bbox_to_anchor=(0.5, 1.15),
                 frameon=True,
                 fontsize=LEGEND_FONTSIZE,
                 columnspacing=1.5,
             )
 
     # Remove top spines
-    sns.despine(top=True, ax=ax1)
-    sns.despine(top=True, ax=ax2)
+    # sns.despine(top=True, ax=ax1)
+    # sns.despine(top=True, ax=ax2)
 
     plt.tight_layout()
 

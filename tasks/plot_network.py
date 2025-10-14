@@ -31,7 +31,7 @@ TITLE_FONTSIZE = FONTSIZE
 LABEL_FONTSIZE = FONTSIZE
 TICK_FONTSIZE = FONTSIZE - 1
 LEGEND_FONTSIZE = FONTSIZE
-ANNOTATION_FONTSIZE = FONTSIZE / 2 - 1
+ANNOTATION_FONTSIZE = FONTSIZE / 2
 
 palette = sns.color_palette("pastel", n_colors=15)
 hatches = ["", "o", "//", "x", ""]
@@ -320,6 +320,7 @@ def plot_iperf(
     ax.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
     # remove legend title
     ax.get_legend().set_title("")
+    ax.grid(True, alpha=0.3, axis="y")
 
     plt.legend(fontsize=LEGEND_FONTSIZE)
 
@@ -329,7 +330,7 @@ def plot_iperf(
             container, fmt="%.2f", rotation=90, padding=2, fontsize=ANNOTATION_FONTSIZE
         )
 
-    sns.despine(top=True)
+    # sns.despine(top=True)
     plt.tight_layout()
 
     if outname is None:
@@ -439,7 +440,7 @@ def plot_redis(
         err_kws={"linewidth": 0.6},
     )
     ax.set_xlabel("", fontsize=LABEL_FONTSIZE)
-    ax.set_ylabel("Throughput [M req/s]", fontsize=LABEL_FONTSIZE)
+    ax.set_ylabel("Throughput (M req/s)", fontsize=LABEL_FONTSIZE)
     ax.set_title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
     ax.tick_params(
         axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1
@@ -451,6 +452,7 @@ def plot_redis(
 
     # set legend ncol
     ax.legend(loc="center", ncol=2, fontsize=LEGEND_FONTSIZE)
+    ax.grid(True, alpha=0.3, axis="y")
 
     # annotate values with .2f
     for container in ax.containers:
@@ -458,7 +460,7 @@ def plot_redis(
             container, fmt="%.2f", fontsize=ANNOTATION_FONTSIZE, rotation=90, padding=2
         )
 
-    sns.despine(top=True)
+    # sns.despine(top=True)
     plt.tight_layout()
 
     if outname is None:
@@ -554,7 +556,7 @@ def plot_memcached(
     df = pd.concat(dfs)
     print(df)
 
-    fig, ax = plt.subplots(figsize=(figwidth_half, 2.0))
+    fig, ax = plt.subplots(figsize=(figwidth_half, 1.1))
     sns.barplot(
         x="workload",
         y="throughput",
@@ -566,7 +568,7 @@ def plot_memcached(
         err_kws={"linewidth": 0.6},
     )
     ax.set_xlabel("", fontsize=LABEL_FONTSIZE)
-    ax.set_ylabel("Throughput [M req/s]", fontsize=LABEL_FONTSIZE)
+    ax.set_ylabel("Throughput (M req/s)", fontsize=LABEL_FONTSIZE)
     ax.set_title("Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
     ax.tick_params(
         axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1
@@ -578,6 +580,7 @@ def plot_memcached(
 
     # set legend ncol
     ax.legend(loc="center", ncol=2, fontsize=LEGEND_FONTSIZE)
+    ax.grid(True, alpha=0.3, axis="y")
 
     # annotate values with .2f
     for container in ax.containers:
@@ -585,7 +588,7 @@ def plot_memcached(
             container, fmt="%.2f", fontsize=ANNOTATION_FONTSIZE, rotation=90, padding=2
         )
 
-    sns.despine(top=True)
+    # sns.despine(top=True)
     plt.tight_layout()
 
     if outname is None:
@@ -607,6 +610,14 @@ def plot_memcached(
     plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
     print(f"PNG plot saved in {save_path_png}")
     plt.clf()
+
+
+def format_value(value):
+    """Format value to remove unnecessary decimal places."""
+    if value == int(value):
+        return f"{int(value)}"  # Return as integer if it's a whole number
+    else:
+        return f"{value:.2f}".rstrip("0").rstrip(".")  # Remove trailing zeros
 
 
 @task
@@ -767,7 +778,7 @@ def plot_network(
     print(redis_df)
 
     # Create combined figure with two subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.5))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.1))
 
     # Iperf subplot (left)
     sns.barplot(
@@ -784,22 +795,30 @@ def plot_network(
 
     if pkt is not None:
         ax1.set_xticklabels([], fontsize=TICK_FONTSIZE)
-        ax1.set_xlabel("", fontsize=LABEL_FONTSIZE)
+        ax1.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=2)
     else:
-        ax1.set_xlabel("Packet Size (byte)", fontsize=LABEL_FONTSIZE)
+        ax1.set_xlabel("Packet Size (byte)", fontsize=LABEL_FONTSIZE, labelpad=2)
 
-    ax1.set_ylabel("Throughput (Gbps)", fontsize=LABEL_FONTSIZE)
+    ax1.set_ylabel("Throughput (Gbps)", fontsize=LABEL_FONTSIZE, labelpad=2)
     ax1.set_title(
-        "(a) Iperf (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=6
+        "(a) Iperf (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=3
     )
-    ax1.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1)
+    ax1.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=2)
     ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
     ax1.get_legend().remove()  # Remove individual legend
+    ax1.grid(True, alpha=0.3, axis="y")
+    ylim1 = ax1.get_ylim()
+    ax1.set_ylim(ylim1[0], ylim1[1] * 1.20)  # Add 20% headroom at top
 
     # Add annotations for iperf
     for container in ax1.containers:
+        labels = [format_value(v.get_height()) for v in container]
         ax1.bar_label(
-            container, fmt="%.2f", rotation=90, padding=2, fontsize=ANNOTATION_FONTSIZE
+            container,
+            labels=labels,
+            rotation=90,
+            padding=2,
+            fontsize=ANNOTATION_FONTSIZE,
         )
 
     # Redis subplot (right)
@@ -815,19 +834,27 @@ def plot_network(
         linewidth=0.6,
     )
 
-    ax2.set_xlabel("Workload", fontsize=LABEL_FONTSIZE)
-    ax2.set_ylabel("Throughput [M req/s]", fontsize=LABEL_FONTSIZE)
+    ax2.set_xlabel("Workload", fontsize=LABEL_FONTSIZE, labelpad=2)
+    ax2.set_ylabel("Throughput (M req/s)", fontsize=LABEL_FONTSIZE, labelpad=2)
     ax2.set_title(
-        "(b) Redis (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=6
+        "(b) Redis (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=3
     )
-    ax2.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1)
+    ax2.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=2)
     ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
     ax2.get_legend().remove()  # Remove individual legend
+    ax2.grid(True, alpha=0.3, axis="y")
+    ylim2 = ax2.get_ylim()
+    ax2.set_ylim(ylim2[0], ylim2[1] * 1.22)  # Add 20% headroom at top
 
     # Add annotations for redis
     for container in ax2.containers:
+        labels = [format_value(v.get_height()) for v in container]
         ax2.bar_label(
-            container, fmt="%.2f", fontsize=ANNOTATION_FONTSIZE, rotation=90, padding=2
+            container,
+            labels=labels,
+            rotation=90,
+            padding=2,
+            fontsize=ANNOTATION_FONTSIZE,
         )
 
     # Create unified legend
@@ -838,15 +865,15 @@ def plot_network(
             labels,
             loc="upper center",
             ncol=min(len(labels), 5),  # Limit columns to prevent overcrowding
-            bbox_to_anchor=(0.52, 1.1),
+            bbox_to_anchor=(0.52, 1.15),
             frameon=True,
             fontsize=LEGEND_FONTSIZE,
             columnspacing=1.5,
         )
 
     # Remove top spines
-    sns.despine(top=True, ax=ax1)
-    sns.despine(top=True, ax=ax2)
+    # sns.despine(top=True, ax=ax1)
+    # sns.despine(top=True, ax=ax2)
 
     # Layout adjustments
     plt.tight_layout()
