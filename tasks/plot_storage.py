@@ -39,6 +39,26 @@ ANNOTATION_FONTSIZE = FONTSIZE / 2
 palette = sns.color_palette("pastel", n_colors=15)
 hatches = ["", "o", "//", "x", ""]
 
+# Define consistent color and hatch mappings for all labels
+LABEL_COLORS = {
+    "Native": palette[0],
+    "VM": palette[1],
+    "SNP": palette[2],
+    "SNP-poll": palette[3],
+    "VM-vhost": palette[4],
+    "SNP-vhost": palette[5],
+}
+
+LABEL_HATCHES = {
+    "Native": "",
+    "VM": "o",
+    "SNP": "//",
+    "SNP-poll": "x",
+    "VM-vhost": "",
+    "SNP-vhost": "o",
+    # Add any other labels you use
+}
+
 
 def read_json(file):
     lines = []
@@ -542,12 +562,17 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
     if iops_data:
         iops_df = pd.DataFrame(iops_data)
 
+        unique_names = df["name"].unique()
+        colors_for_plot = [
+            LABEL_COLORS.get(name, palette[i % len(palette)])
+            for i, name in enumerate(unique_names)
+        ]
         sns.barplot(
             data=iops_df,
             x="jobname",
             y="metric_value",
             hue="name",
-            palette=palette,
+            palette=colors_for_plot,
             edgecolor="k",
             linewidth=0.6,
             ax=ax1,
@@ -646,12 +671,17 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
     if lat_data:
         lat_df = pd.DataFrame(lat_data)
 
+        unique_names = df["name"].unique()
+        colors_for_plot = [
+            LABEL_COLORS.get(name, palette[i % len(palette)])
+            for i, name in enumerate(unique_names)
+        ]
         sns.barplot(
             data=lat_df,
             x="jobname",
             y="metric_value",
             hue="name",
-            palette=palette,
+            palette=colors_for_plot,
             edgecolor="k",
             linewidth=0.6,
             ax=ax2,

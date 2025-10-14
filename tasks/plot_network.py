@@ -38,6 +38,26 @@ hatches = ["", "o", "//", "x", ""]
 
 BENCH_RESULT_DIR = Path("./bench-result/network")
 
+# Define consistent color and hatch mappings for all labels
+LABEL_COLORS = {
+    "Native": palette[0],
+    "VM": palette[1],
+    "SNP": palette[2],
+    "SNP-poll": palette[3],
+    "VM-vhost": palette[4],
+    "SNP-vhost": palette[5],
+}
+
+LABEL_HATCHES = {
+    "Native": "",
+    "VM": "o",
+    "SNP": "//",
+    "SNP-poll": "x",
+    "VM-vhost": "",
+    "SNP-vhost": "o",
+    # Add any other labels you use
+}
+
 
 def parse_iperf_result_sub(
     name: str, mode: str, date: str, lebel: str, pkt_size: [int]
@@ -781,13 +801,18 @@ def plot_network(
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.1))
 
     # Iperf subplot (left)
+    unique_names = iperf_df["name"].unique()
+    colors_for_plot = [
+        LABEL_COLORS.get(name, palette[i % len(palette)])
+        for i, name in enumerate(unique_names)
+    ]
     sns.barplot(
         x="size",
         y="throughput",
         hue="name",
         data=iperf_df,
         ax=ax1,
-        palette=palette,
+        palette=colors_for_plot,
         edgecolor="black",
         err_kws={"linewidth": 0.6},
         linewidth=0.6,
@@ -822,13 +847,18 @@ def plot_network(
         )
 
     # Redis subplot (right)
+    unique_names = redis_df["name"].unique()
+    colors_for_plot = [
+        LABEL_COLORS.get(name, palette[i % len(palette)])
+        for i, name in enumerate(unique_names)
+    ]
     sns.barplot(
         x="workload",
         y="throughput",
         hue="name",
         data=redis_df,
         ax=ax2,
-        palette=palette,
+        palette=colors_for_plot,
         edgecolor="black",
         err_kws={"linewidth": 0.6},
         linewidth=0.6,
