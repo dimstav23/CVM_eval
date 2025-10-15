@@ -670,7 +670,6 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
 
     if lat_data:
         lat_df = pd.DataFrame(lat_data)
-
         unique_names = df["name"].unique()
         colors_for_plot = [
             LABEL_COLORS.get(name, palette[i % len(palette)])
@@ -776,6 +775,101 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
     # Remove top spines
     # sns.despine(top=True, ax=ax1)
     # sns.despine(top=True, ax=ax2)
+    # Print statistics for plotted values
+    print("\n" + "=" * 80)
+    print("STORAGE PERFORMANCE STATISTICS (Plotted Values)")
+    print("=" * 80)
+
+    # Throughput statistics
+    if iops_data:
+        print("\n--- THROUGHPUT (K IOPS) ---")
+        for job_name in ["iops read", "iops write", "iops randread", "iops randwrite"]:
+            job_label = job_name.replace("iops ", "").replace("rand", "Rand ").title()
+            print(f"\n{job_label}:")
+
+            job_data = iops_df[iops_df["jobname"] == job_name]
+            if not job_data.empty:
+                for name in job_data["name"].unique():
+                    variant_data = job_data[job_data["name"] == name]
+                    if not variant_data.empty:
+                        throughput_kiops = variant_data["metric_value"].values[0] / 1000
+                        error_kiops = variant_data["error_value"].values[0] / 1000
+                        print(
+                            f"  {name:20s}: {throughput_kiops:8.1f} ± {error_kiops:6.1f} K IOPS"
+                        )
+
+    # Latency statistics
+    if lat_data:
+        print("\n--- LATENCY (microseconds) ---")
+        for job_name in ["lat read", "lat write", "lat randread", "lat randwrite"]:
+            job_label = job_name.replace("lat ", "").replace("rand", "Rand ").title()
+            print(f"\n{job_label}:")
+
+            job_data = lat_df[lat_df["jobname"] == job_name]
+            if not job_data.empty:
+                for name in job_data["name"].unique():
+                    variant_data = job_data[job_data["name"] == name]
+                    if not variant_data.empty:
+                        latency_us = variant_data["metric_value"].values[0] / 1000
+                        error_us = variant_data["error_value"].values[0] / 1000
+                        print(f"  {name:20s}: {latency_us:8.1f} ± {error_us:6.1f} us")
+
+    # Performance comparison table
+    if iops_data and lat_data:
+        print("\n--- PERFORMANCE COMPARISON ---")
+        print(
+            f"{'Variant':<20} {'Seq Read':<15} {'Seq Write':<15} {'Rand Read':<15} {'Rand Write':<15}"
+        )
+        print(
+            f"{'':20} {'(K IOPS)':<15} {'(K IOPS)':<15} {'(K IOPS)':<15} {'(K IOPS)':<15}"
+        )
+        print("-" * 80)
+
+        for name in iops_df["name"].unique():
+            values = []
+            for job_name in [
+                "iops read",
+                "iops write",
+                "iops randread",
+                "iops randwrite",
+            ]:
+                job_data = iops_df[
+                    (iops_df["jobname"] == job_name) & (iops_df["name"] == name)
+                ]
+                if not job_data.empty:
+                    val = job_data["metric_value"].values[0] / 1000
+                    values.append(f"{val:.1f}")
+                else:
+                    values.append("N/A")
+
+            print(
+                f"{name:<20} {values[0]:<15} {values[1]:<15} {values[2]:<15} {values[3]:<15}"
+            )
+
+        print("\n")
+        print(
+            f"{'Variant':<20} {'Seq Read':<15} {'Seq Write':<15} {'Rand Read':<15} {'Rand Write':<15}"
+        )
+        print(f"{'':20} {'(us)':<15} {'(us)':<15} {'(us)':<15} {'(us)':<15}")
+        print("-" * 80)
+
+        for name in lat_df["name"].unique():
+            values = []
+            for job_name in ["lat read", "lat write", "lat randread", "lat randwrite"]:
+                job_data = lat_df[
+                    (lat_df["jobname"] == job_name) & (lat_df["name"] == name)
+                ]
+                if not job_data.empty:
+                    val = job_data["metric_value"].values[0] / 1000
+                    values.append(f"{val:.1f}")
+                else:
+                    values.append("N/A")
+
+            print(
+                f"{name:<20} {values[0]:<15} {values[1]:<15} {values[2]:<15} {values[3]:<15}"
+            )
+
+    print("\n" + "=" * 80 + "\n")
 
     plt.tight_layout()
 
