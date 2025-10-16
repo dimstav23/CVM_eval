@@ -34,7 +34,7 @@ TITLE_FONTSIZE = FONTSIZE
 LABEL_FONTSIZE = FONTSIZE
 TICK_FONTSIZE = FONTSIZE - 1
 LEGEND_FONTSIZE = FONTSIZE
-ANNOTATION_FONTSIZE = FONTSIZE / 2
+ANNOTATION_FONTSIZE = FONTSIZE / 2 + 1
 
 palette = sns.color_palette("pastel", n_colors=15)
 hatches = ["", "o", "//", "x", ""]
@@ -533,7 +533,7 @@ def plot_latency(df, outdir, outname, legend=True):
 
 def plot_throughput_latency_combined(df, outdir, outname, legend=True):
     """Create side-by-side subplots for throughput (IOPS) and latency"""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.1))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.4))
 
     # Throughput subplot (left)
     iops_jobs = [
@@ -573,8 +573,9 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
             y="metric_value",
             hue="name",
             palette=colors_for_plot,
-            edgecolor="k",
+            edgecolor="black",
             linewidth=0.6,
+            err_kws={"linewidth": 0.6},
             ax=ax1,
         )
 
@@ -617,9 +618,9 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
             rotation=20,
         )
         ax1.tick_params(axis="x", length=3, pad=0)  # Remove x-axis tick bars
-        ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
-        ax1.set_ylabel("Throughput (K IOPS)", fontsize=LABEL_FONTSIZE, labelpad=2)
-        ax1.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=0)
+        ax1.set_ylabel("Throughput (K IOPS)", fontsize=LABEL_FONTSIZE, labelpad=0)
+        ax1.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=0)
         ax1.set_title(
             "Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3
         )
@@ -724,9 +725,9 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
             rotation=20,
         )
         ax2.tick_params(axis="x", length=3, pad=0)  # Remove x-axis tick bars
-        ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
-        ax2.set_ylabel("4KB Latency (us)", fontsize=LABEL_FONTSIZE, labelpad=2)
-        ax2.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=0)
+        ax2.set_ylabel("4KB Latency (us)", fontsize=LABEL_FONTSIZE, labelpad=0)
+        ax2.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=0)
         ax2.set_title("Lower is better ↓", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
         ax2.grid(True, alpha=0.3, axis="y")
         ylim2 = ax2.get_ylim()
@@ -766,7 +767,7 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
                 labels,
                 loc="upper center",
                 ncol=n,
-                bbox_to_anchor=(0.5, 1.15),
+                bbox_to_anchor=(0.5, 1.11),
                 frameon=True,
                 fontsize=LEGEND_FONTSIZE,
                 columnspacing=1.5,
@@ -875,7 +876,7 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
 
     # Save as PDF
     outfile_pdf = Path(outdir) / outname
-    plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight")
+    plt.savefig(outfile_pdf, format="pdf", pad_inches=0, bbox_inches="tight", dpi=300)
     print(f"Combined PDF saved to {outfile_pdf}")
     # Save as PNG
     outfile_png = Path(outdir) / outname.replace(".pdf", ".png")

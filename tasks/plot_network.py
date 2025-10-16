@@ -31,7 +31,7 @@ TITLE_FONTSIZE = FONTSIZE
 LABEL_FONTSIZE = FONTSIZE
 TICK_FONTSIZE = FONTSIZE - 1
 LEGEND_FONTSIZE = FONTSIZE
-ANNOTATION_FONTSIZE = FONTSIZE / 2
+ANNOTATION_FONTSIZE = FONTSIZE / 2 + 1
 
 palette = sns.color_palette("pastel", n_colors=15)
 hatches = ["", "o", "//", "x", ""]
@@ -576,7 +576,7 @@ def plot_memcached(
     df = pd.concat(dfs)
     print(df)
 
-    fig, ax = plt.subplots(figsize=(figwidth_half, 1.1))
+    fig, ax = plt.subplots(figsize=(figwidth_half, 1.4))
     sns.barplot(
         x="workload",
         y="throughput",
@@ -798,7 +798,7 @@ def plot_network(
     print(redis_df)
 
     # Create combined figure with two subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.1))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(figwidth_half, 1.4))
 
     # Iperf subplot (left)
     unique_names = iperf_df["name"].unique()
@@ -820,16 +820,16 @@ def plot_network(
 
     if pkt is not None:
         ax1.set_xticklabels([], fontsize=TICK_FONTSIZE)
-        ax1.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax1.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=0)
     else:
-        ax1.set_xlabel("Packet Size (byte)", fontsize=LABEL_FONTSIZE, labelpad=2)
+        ax1.set_xlabel("Packet Size (byte)", fontsize=LABEL_FONTSIZE, labelpad=1)
 
-    ax1.set_ylabel("Throughput (Gbps)", fontsize=LABEL_FONTSIZE, labelpad=2)
+    ax1.set_ylabel("Throughput (Gbps)", fontsize=LABEL_FONTSIZE, labelpad=0)
     ax1.set_title(
         "(a) Iperf (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=3
     )
-    ax1.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=2)
-    ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
+    ax1.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1)
+    ax1.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=0)
     ax1.get_legend().remove()  # Remove individual legend
     ax1.grid(True, alpha=0.3, axis="y")
     ylim1 = ax1.get_ylim()
@@ -842,7 +842,7 @@ def plot_network(
             container,
             labels=labels,
             rotation=90,
-            padding=2,
+            padding=3,
             fontsize=ANNOTATION_FONTSIZE,
         )
 
@@ -864,13 +864,13 @@ def plot_network(
         linewidth=0.6,
     )
 
-    ax2.set_xlabel("Workload", fontsize=LABEL_FONTSIZE, labelpad=2)
-    ax2.set_ylabel("Throughput (M req/s)", fontsize=LABEL_FONTSIZE, labelpad=2)
+    ax2.set_xlabel("Workload", fontsize=LABEL_FONTSIZE, labelpad=1)
+    ax2.set_ylabel("Throughput (M req/s)", fontsize=LABEL_FONTSIZE, labelpad=0)
     ax2.set_title(
         "(b) Redis (Higher is better ↑)", fontsize=FONTSIZE, color="navy", pad=3
     )
-    ax2.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=2)
-    ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=2)
+    ax2.tick_params(axis="x", labelsize=TICK_FONTSIZE, length=3, pad=1)
+    ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=0)
     ax2.get_legend().remove()  # Remove individual legend
     ax2.grid(True, alpha=0.3, axis="y")
     ylim2 = ax2.get_ylim()
@@ -895,7 +895,7 @@ def plot_network(
             labels,
             loc="upper center",
             ncol=min(len(labels), 5),  # Limit columns to prevent overcrowding
-            bbox_to_anchor=(0.52, 1.15),
+            bbox_to_anchor=(0.5, 1.12),
             frameon=True,
             fontsize=LEGEND_FONTSIZE,
             columnspacing=1.5,
@@ -925,12 +925,12 @@ def plot_network(
 
     # Save as PDF
     save_path_pdf = outdir / outname
-    plt.savefig(save_path_pdf, format="pdf", bbox_inches="tight", dpi=300)
+    plt.savefig(save_path_pdf, format="pdf", pad_inches=0, bbox_inches="tight", dpi=300)
     print(f"Combined PDF plot saved in {save_path_pdf}")
 
     # Save as PNG
     save_path_png = outdir / outname.replace(".pdf", ".png")
-    plt.savefig(save_path_png, format="png", bbox_inches="tight", dpi=300)
+    plt.savefig(save_path_png, format="png", pad_inches=0, bbox_inches="tight", dpi=300)
     print(f"Combined PNG plot saved in {save_path_png}")
 
     plt.clf()
