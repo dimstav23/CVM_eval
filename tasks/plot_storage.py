@@ -622,7 +622,10 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
         ax1.set_ylabel("Throughput (K IOPS)", fontsize=LABEL_FONTSIZE, labelpad=0)
         ax1.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=0)
         ax1.set_title(
-            "Higher is better ↑", fontsize=TITLE_FONTSIZE, color="navy", pad=3
+            "(a) Throughput (Higher is better ↑)",
+            fontsize=TITLE_FONTSIZE,
+            color="navy",
+            pad=3,
         )
         ax1.grid(True, alpha=0.3, axis="y")
         ylim1 = ax1.get_ylim()
@@ -728,7 +731,12 @@ def plot_throughput_latency_combined(df, outdir, outname, legend=True):
         ax2.tick_params(axis="y", labelsize=TICK_FONTSIZE, pad=0)
         ax2.set_ylabel("4KB Latency (us)", fontsize=LABEL_FONTSIZE, labelpad=0)
         ax2.set_xlabel("", fontsize=LABEL_FONTSIZE, labelpad=0)
-        ax2.set_title("Lower is better ↓", fontsize=TITLE_FONTSIZE, color="navy", pad=3)
+        ax2.set_title(
+            "(b) Latency (Lower is better ↓)",
+            fontsize=TITLE_FONTSIZE,
+            color="navy",
+            pad=3,
+        )
         ax2.grid(True, alpha=0.3, axis="y")
         ylim2 = ax2.get_ylim()
         ax2.set_ylim(ylim2[0], ylim2[1] * 1.15)  # Add 15% headroom at top
