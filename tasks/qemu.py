@@ -154,10 +154,13 @@ class QemuVm:
         Block until ssh port is accessible
         """
         print(f"wait for ssh on {self.ssh_port}")
+        # mountpoint -q confirms the 9p mount completed; the -e check
+        # confirms the tree we actually use is visible through it.
+        readiness_check = "mountpoint -q /share && test -e /share/benchmarks"
         while True:
             if (
                 self.ssh_cmd(
-                    ["echo", "ok"],
+                    ["sh", "-c", readiness_check],
                     check=False,
                     stderr=subprocess.DEVNULL,
                     verbose=False,

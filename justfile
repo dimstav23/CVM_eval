@@ -295,6 +295,7 @@ setup_bridge:
     fi
 
 setup_tap:
+    #!/usr/bin/env bash
     sudo ip tuntap add {{TAP_NAME}} mode tap
     sudo ip link set {{TAP_NAME}} master {{BRIDGE_NAME}}
     sudo ip link set {{TAP_NAME}} up
